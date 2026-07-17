@@ -459,27 +459,188 @@ button:active {
 }
 
 .start-menu--main-menu::after {
+  display: none;
+  content: none;
+}
+
+.menu-copy-overlay {
   position: absolute;
-  left: 42.2%;
-  top: 39.3%;
-  z-index: 1;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.menu-sign-out-copy {
+  position: absolute;
+  left: 43.35%;
+  top: 39.75%;
+  z-index: 5;
   display: grid;
-  place-items: center;
-  width: 13%;
-  height: 4.6%;
-  content: "SIGN OUT";
+  place-items: center start;
+  width: 10.8%;
+  height: 3.9%;
+  padding-left: 0.8%;
   color: #ff3434;
   background: #020911;
-  font-family: "Geist Pixel", "Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: "Geist Pixel", sans-serif;
   font-optical-sizing: auto;
+  font-size: clamp(13px, 1.9vw, 29px);
+  font-weight: 400;
+  font-style: normal;
   font-variation-settings: "ELSH" 0;
-  font-size: clamp(13px, 1.7vw, 24px);
-  font-weight: 900;
   letter-spacing: 0;
   line-height: 1;
   pointer-events: none;
   text-shadow: 2px 2px 0 #17101f;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.menu-copy {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  color: #fff1c7;
+  background: #020911;
+  font-family: "Geist Pixel", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "ELSH" 0;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 2px 2px 0 #17101f;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.menu-copy--coins {
+  left: 6.9%;
+  top: 4.3%;
+  width: 7.3%;
+  height: 3.6%;
+  justify-items: start;
+  color: #fff1c7;
+  font-size: clamp(15px, 2.2vw, 34px);
+}
+
+.menu-copy--level {
+  left: 88.8%;
+  top: 4.3%;
+  width: 5.9%;
+  height: 3.6%;
+  justify-items: start;
+  color: #fff1c7;
+  font-size: clamp(12px, 1.9vw, 29px);
+}
+
+.menu-copy--center-play,
+.menu-copy--center-adventure,
+.menu-copy--center-settings,
+.menu-copy--center-sign-out {
+  left: 43.35%;
+  width: 10.8%;
+  height: 3.9%;
+  justify-items: start;
+  padding-left: 0.8%;
+  font-size: clamp(13px, 1.9vw, 29px);
+}
+
+.menu-copy--center-play {
+  top: 21.35%;
+  color: #ffb31a;
+}
+
+.menu-copy--center-adventure {
+  left: 43.35%;
+  top: 28%;
+  width: 15.2%;
+  height: 4.3%;
+  font-size: clamp(13px, 1.8vw, 28px);
+}
+
+.menu-copy--center-settings {
+  top: 33.5%;
+}
+
+.menu-copy--center-sign-out {
+  top: 39.75%;
+  color: #ff3434;
+}
+
+.menu-copy--world-title,
+.menu-copy--settings-title {
+  top: 57.1%;
+  height: 3.6%;
+  color: #fff1c7;
+  font-size: clamp(12px, 1.55vw, 25px);
+}
+
+.menu-copy--world-title {
+  left: 25.2%;
+  width: 12.1%;
+}
+
+.menu-copy--settings-title {
+  left: 61.3%;
+  width: 11.9%;
+}
+
+.menu-copy--one-player,
+.menu-copy--two-players,
+.menu-copy--sound,
+.menu-copy--language,
+.menu-copy--reset,
+.menu-copy--back {
+  left: 52.3%;
+  justify-items: start;
+  width: 12.1%;
+  height: 3.1%;
+  font-size: clamp(10px, 1.25vw, 20px);
+}
+
+.menu-copy--one-player {
+  top: 62.35%;
+  width: 10.2%;
+}
+
+.menu-copy--two-players {
+  left: 52.05%;
+  top: 66.85%;
+  width: 10.8%;
+}
+
+.menu-copy--sound {
+  top: 71.7%;
+  width: 8%;
+}
+
+.menu-copy--language {
+  left: 52.05%;
+  top: 75.45%;
+  width: 9.5%;
+}
+
+.menu-copy--reset {
+  top: 80.45%;
+  width: 15.3%;
+  color: #ff3434;
+}
+
+.menu-copy--back {
+  left: 52.05%;
+  top: 84.45%;
+  width: 8.5%;
+}
+
+.menu-copy--bottom-play {
+  left: 44.8%;
+  top: 91.55%;
+  width: 8.3%;
+  height: 3.8%;
+  color: #fff1c7;
+  background: transparent;
+  font-size: clamp(18px, 2.5vw, 40px);
 }
 
 .start-menu__eyebrow,
@@ -890,6 +1051,39 @@ button:active {
   background: #7d8795;
 }
 
+.settings-panel__language {
+  position: absolute;
+  left: 67.5%;
+  top: 61%;
+  z-index: 2;
+  width: 20%;
+  height: 12.5%;
+  min-height: 0;
+  border: 2px solid #f0a51b;
+  border-radius: 0;
+  padding: 0;
+  color: #63f034;
+  background: #071018;
+  box-shadow:
+    0 0 0 2px #2a1708,
+    inset 0 0 0 2px #473016,
+    inset 3px 3px 0 rgba(255, 196, 82, 0.16),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.62);
+  font-family: "Geist Pixel", sans-serif;
+  font-optical-sizing: auto;
+  font-size: clamp(10px, 1.35vw, 20px);
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "ELSH" 0;
+  line-height: 1;
+  text-shadow: 2px 2px 0 #020611;
+}
+
+.settings-panel__language:hover,
+.settings-panel__language:active {
+  filter: none;
+}
+
 .settings-panel__hotspot--reset {
   left: 5%;
   top: 75%;
@@ -1175,12 +1369,13 @@ canvas {
 
 .tutorial-sign {
   position: absolute;
-  left: 29%;
-  top: 91%;
+  left: 50%;
+  bottom: 10px;
   z-index: 12;
-  width: 17%;
-  height: 6%;
+  width: 150px;
+  height: 40px;
   min-height: 38px;
+  transform: translateX(-50%);
   border: 3px solid #f0a51b;
   background: #071018;
   color: #ffe45e;
@@ -1191,7 +1386,7 @@ canvas {
 }
 
 .tutorial-sign:active {
-  transform: translateY(1px);
+  transform: translate(-50%, 1px);
 }
 
 .tutorial-modal {

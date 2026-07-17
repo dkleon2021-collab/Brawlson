@@ -62,6 +62,7 @@ type AppView = 'registration' | 'game';
 type GameScreen = 'main-menu' | 'mode-menu' | 'map-menu' | 'playing';
 type PlayerMode = '1p' | '2p';
 type StageId = 'desert' | 'space' | 'ocean' | 'forest' | 'hell';
+type Language = 'en' | 'ru';
 type SpriteFrame = { x: number; y: number; width: number; height: number };
 
 const STAGES: Array<{ id: StageId; name: string; number: string }> = [
@@ -79,6 +80,151 @@ const STAGE_TITLES: Record<StageId, string> = {
   forest: 'STAGE 4: FOREST OF BEGINNINGS',
   hell: 'STAGE 5: INFERNAL WASTES',
 };
+
+const STAGE_TITLES_RU: Record<StageId, string> = {
+  desert: 'ЭТАП 1: КАНЬОН',
+  space: 'ЭТАП 2: ДАЛЬНИЙ КОСМОС',
+  ocean: 'ЭТАП 3: ЗАТОНУВШИЕ БЕРЕГА',
+  forest: 'ЭТАП 4: ЛЕС НАЧАЛА',
+  hell: 'ЭТАП 5: АДСКИЕ ПУСТОШИ',
+};
+
+const STAGE_NAMES_RU: Record<StageId, string> = {
+  forest: 'Лес',
+  desert: 'Пустыня',
+  ocean: 'Океан',
+  hell: 'Инферно',
+  space: 'Космос',
+};
+
+const TEXT = {
+  en: {
+    on: 'ON',
+    off: 'OFF',
+    signOut: 'Sign out',
+    startMenu: 'Start menu',
+    pixelQuest: 'Pixel Quest',
+    selectMode: 'Select Mode',
+    onePlayerMode: '1 Player Mode',
+    twoPlayerMode: '2 Player Mode',
+    chooseMap: 'Choose Map',
+    gameTitle: 'Brawlson',
+    play: 'Play',
+    adventureMode: 'Adventure Mode',
+    menuSettings: 'Settings',
+    previousWorld: 'Previous world',
+    nextWorld: 'Next world',
+    selectWorld: 'Select world',
+    settings: 'Settings',
+    soundVolume: 'Sound volume',
+    sound: 'Sound',
+    language: 'Language',
+    onePlayer: '1 Player',
+    twoPlayers: '2 Players',
+    level: 'Lv. 12',
+    resetProgress: 'Reset Progress',
+    back: 'Back',
+    pressStart: 'Press Enter or Space',
+    pressStage: 'Press 1-5 to pick a stage',
+    tutorial: 'Tutorial',
+    characters: 'Characters',
+    controls: 'Controls',
+    arenaPaused: 'Brawlson fighting arena paused',
+    arena: 'Brawlson fighting arena',
+    rotateTitle: 'Flip your phone',
+    rotateBody: 'Turn sideways to play',
+    tutorialIntro: 'Pick a world, choose 1 Player or 2 Players, then press Play.',
+    player1: 'Player 1',
+    player2: 'Player 2',
+    pause: 'Pause',
+    mobile: 'Mobile',
+    tutorialP1: 'A/D move, W jump, F punch, G fireball, H water ball.',
+    tutorialP2: 'Arrow keys move and jump, / punch, . fireball, , water ball.',
+    tutorialPause: 'Esc pauses. Space continues. Esc again opens the menu.',
+    tutorialMobile: 'Turn your phone sideways. Touch controls appear during the fight.',
+    gotIt: 'Got it',
+    left: 'Left',
+    jump: 'Jump',
+    right: 'Right',
+    punch: 'Punch',
+    fire: 'Fire',
+    water: 'Water',
+    newRound: 'New Round',
+    cpuControls: (name: string) => `Computer controls ${name} in 1 Player mode`,
+    p2Controls: (move: string) => `Arrows move/jump, / punch, . fireball, , ${move}`,
+    p1Controls: (move: string) => `A/D move, W jump, F punch, G ${move}, H water ball`,
+    paused: 'PAUSED',
+    continue: 'PRESS SPACE TO CONTINUE',
+    menu: 'PRESS ESC AGAIN TO GO TO MENU',
+    playerVsCpu: 'Player vs CPU',
+    playerVsPlayer: 'Player vs Player',
+    cpu: 'CPU',
+    wins: (name: string) => `${name} wins!`,
+  },
+  ru: {
+    on: 'ВКЛ',
+    off: 'ВЫКЛ',
+    signOut: 'Выйти',
+    startMenu: 'Главное меню',
+    pixelQuest: 'Пиксельный квест',
+    selectMode: 'Выбор режима',
+    onePlayerMode: 'Режим 1 игрока',
+    twoPlayerMode: 'Режим 2 игроков',
+    chooseMap: 'Выбери карту',
+    gameTitle: 'Brawlson',
+    play: 'Играть',
+    adventureMode: 'Приключение',
+    menuSettings: 'Настройки',
+    previousWorld: 'Предыдущий мир',
+    nextWorld: 'Следующий мир',
+    selectWorld: 'Выбор мира',
+    settings: 'Настройки',
+    soundVolume: 'Громкость',
+    sound: 'Звук',
+    language: 'Язык',
+    onePlayer: '1 игрок',
+    twoPlayers: '2 игрока',
+    level: 'Ур. 12',
+    resetProgress: 'Сбросить прогресс',
+    back: 'Назад',
+    pressStart: 'Нажми Enter или Space',
+    pressStage: 'Нажми 1-5 чтобы выбрать этап',
+    tutorial: 'Обучение',
+    characters: 'Персонажи',
+    controls: 'Управление',
+    arenaPaused: 'Арена Brawlson на паузе',
+    arena: 'Арена Brawlson',
+    rotateTitle: 'Поверни телефон',
+    rotateBody: 'Играй горизонтально',
+    tutorialIntro: 'Выбери мир, выбери 1 или 2 игроков, затем нажми Играть.',
+    player1: 'Игрок 1',
+    player2: 'Игрок 2',
+    pause: 'Пауза',
+    mobile: 'Телефон',
+    tutorialP1: 'A/D движение, W прыжок, F удар, G огонь, H вода.',
+    tutorialP2: 'Стрелки движение и прыжок, / удар, . огонь, , вода.',
+    tutorialPause: 'Esc ставит паузу. Space продолжает. Esc снова открывает меню.',
+    tutorialMobile: 'Поверни телефон боком. Сенсорные кнопки появятся во время боя.',
+    gotIt: 'Понятно',
+    left: 'Влево',
+    jump: 'Прыжок',
+    right: 'Вправо',
+    punch: 'Удар',
+    fire: 'Огонь',
+    water: 'Вода',
+    newRound: 'Новый раунд',
+    cpuControls: (name: string) => `Компьютер управляет ${name} в режиме 1 игрока`,
+    p2Controls: (move: string) => `Стрелки движение/прыжок, / удар, . огонь, , ${move}`,
+    p1Controls: (move: string) => `A/D движение, W прыжок, F удар, G ${move}, H вода`,
+    paused: 'ПАУЗА',
+    continue: 'НАЖМИ SPACE ЧТОБЫ ПРОДОЛЖИТЬ',
+    menu: 'НАЖМИ ESC СНОВА ЧТОБЫ ВЫЙТИ В МЕНЮ',
+    playerVsCpu: 'Игрок против компьютера',
+    playerVsPlayer: 'Игрок против игрока',
+    cpu: 'Бот',
+    wins: (name: string) => `${name} победил!`,
+  },
+} satisfies Record<Language, Record<string, unknown>>;
 
 const CHARACTERS = {
   p1: {
@@ -257,6 +403,7 @@ function App() {
   const pausedRef = useRef(false);
   const playerModeRef = useRef<PlayerMode>('1p');
   const stageRef = useRef<StageId>('forest');
+  const languageRef = useRef<Language>('en');
   const soundLevelRef = useRef(7);
   const kazanSheetRef = useRef<HTMLImageElement | null>(null);
   const kazanFrameCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
@@ -274,6 +421,7 @@ function App() {
   const [playerMode, setPlayerMode] = useState<PlayerMode>('1p');
   const [stage, setStage] = useState<StageId>('forest');
   const [soundLevel, setSoundLevel] = useState(7);
+  const [language, setLanguage] = useState<Language>('en');
   const [showTutorial, setShowTutorial] = useState(false);
   const [hud, setHud] = useState<Hud>({
     p1Health: 100,
@@ -296,6 +444,18 @@ function App() {
   const closeTutorial = () => {
     localStorage.setItem(TUTORIAL_STORAGE_KEY, 'yes');
     setShowTutorial(false);
+  };
+
+  const t = TEXT[language];
+  const getStageName = (stageId: StageId) =>
+    language === 'ru' ? STAGE_NAMES_RU[stageId] : STAGES.find((item) => item.id === stageId)?.name ?? 'Desert';
+
+  const toggleLanguage = () => {
+    setLanguage((current) => {
+      const next = current === 'en' ? 'ru' : 'en';
+      languageRef.current = next;
+      return next;
+    });
   };
 
   const ensureAudioContext = () => {
@@ -420,8 +580,9 @@ function App() {
       void audioContext.resume();
     }
     gameRef.current = createGame();
-    const stageName = STAGES.find((item) => item.id === selectedStage)?.name ?? 'Desert';
-    gameRef.current.message = `${mode === '1p' ? 'Player vs CPU' : 'Player vs Player'} - ${stageName}`;
+    const stageName = getStageName(selectedStage);
+    const modeLabel = mode === '1p' ? t.playerVsCpu : t.playerVsPlayer;
+    gameRef.current.message = `${modeLabel} - ${stageName}`;
     keysRef.current.clear();
     pausedRef.current = false;
     playerModeRef.current = mode;
@@ -438,7 +599,7 @@ function App() {
       p2Energy: 100,
       p1Wins: 0,
       p2Wins: 0,
-      message: `${mode === '1p' ? 'Player vs CPU' : 'Player vs Player'} - ${stageName}`,
+      message: `${modeLabel} - ${stageName}`,
     });
   };
 
@@ -866,7 +1027,8 @@ function App() {
       if (game.p1.health <= 0 || game.p2.health <= 0) {
         const winner = game.p1.health > game.p2.health ? game.p1 : game.p2;
         winner.wins += 1;
-        game.message = `${winner === game.p1 ? CHARACTERS.p1.name : CHARACTERS.p2.name} wins!`;
+        const languageCopy = TEXT[languageRef.current];
+        game.message = languageCopy.wins(winner === game.p1 ? CHARACTERS.p1.name : CHARACTERS.p2.name);
         game.roundOver = 115;
       }
     };
@@ -2122,8 +2284,9 @@ function App() {
       context.lineWidth = 4;
       context.font = '900 22px monospace';
       context.textAlign = 'center';
-      context.strokeText(STAGE_TITLES[stageRef.current], WIDTH / 2, 30);
-      context.fillText(STAGE_TITLES[stageRef.current], WIDTH / 2, 30);
+      const stageTitle = languageRef.current === 'ru' ? STAGE_TITLES_RU[stageRef.current] : STAGE_TITLES[stageRef.current];
+      context.strokeText(stageTitle, WIDTH / 2, 30);
+      context.fillText(stageTitle, WIDTH / 2, 30);
 
       context.fillStyle = 'rgba(255, 255, 255, 0.08)';
       for (let y = 0; y < HEIGHT; y += 6) {
@@ -2244,12 +2407,13 @@ function App() {
         context.lineWidth = 6;
         context.font = '900 54px monospace';
         context.textAlign = 'center';
-        context.strokeText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
-        context.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 12);
+        const languageCopy = TEXT[languageRef.current];
+        context.strokeText(languageCopy.paused, WIDTH / 2, HEIGHT / 2 - 12);
+        context.fillText(languageCopy.paused, WIDTH / 2, HEIGHT / 2 - 12);
         context.font = '900 16px monospace';
         context.fillStyle = '#fff8d6';
-        context.fillText('PRESS SPACE TO CONTINUE', WIDTH / 2, HEIGHT / 2 + 28);
-        context.fillText('PRESS ESC AGAIN TO GO TO MENU', WIDTH / 2, HEIGHT / 2 + 54);
+        context.fillText(languageCopy.continue, WIDTH / 2, HEIGHT / 2 + 28);
+        context.fillText(languageCopy.menu, WIDTH / 2, HEIGHT / 2 + 54);
       }
     };
 
@@ -2302,8 +2466,9 @@ function App() {
 
   const fullReset = () => {
     gameRef.current = createGame();
-    const stageName = STAGES.find((item) => item.id === stage)?.name ?? 'Desert';
-    gameRef.current.message = `${playerMode === '1p' ? 'Player vs CPU' : 'Player vs Player'} - ${stageName}`;
+    const stageName = getStageName(stage);
+    const modeLabel = playerMode === '1p' ? t.playerVsCpu : t.playerVsPlayer;
+    gameRef.current.message = `${modeLabel} - ${stageName}`;
     pausedRef.current = false;
     keysRef.current.clear();
     setPaused(false);
@@ -2328,7 +2493,7 @@ function App() {
   };
 
   if (view === 'registration') {
-    return <Auth onAuthenticated={enterGame} onContinueGuest={() => enterGame()} />;
+    return <Auth language={language} onAuthenticated={enterGame} onContinueGuest={() => enterGame()} />;
   }
 
   return (
@@ -2338,92 +2503,112 @@ function App() {
           ref={canvasRef}
           width={WIDTH}
           height={HEIGHT}
-          aria-label={paused ? 'Brawlson fighting arena paused' : 'Brawlson fighting arena'}
+          aria-label={paused ? t.arenaPaused : t.arena}
         />
         {screen !== 'playing' && (
-          <div className={`start-menu start-menu--${screen}`} role="dialog" aria-label="Start menu">
+          <div className={`start-menu start-menu--${screen}`} role="dialog" aria-label={t.startMenu}>
             <p className="start-menu__eyebrow">
               {screen === 'main-menu'
-                ? 'Pixel Quest'
+                ? t.pixelQuest
                 : screen === 'mode-menu'
-                ? 'Select Mode'
-                : `${playerMode === '1p' ? '1 Player' : '2 Player'} Mode`}
+                ? t.selectMode
+                : playerMode === '1p'
+                ? t.onePlayerMode
+                : t.twoPlayerMode}
             </p>
-            <h2>{screen === 'map-menu' ? 'Choose Map' : 'Brawlson'}</h2>
+            <h2>{screen === 'map-menu' ? t.chooseMap : t.gameTitle}</h2>
 
             {screen === 'main-menu' ? (
               <div className="start-menu__options start-menu__options--play">
                 <button type="button" onClick={() => startGame(playerModeRef.current, stageRef.current)}>
-                  Play
+                  {t.play}
                 </button>
               </div>
             ) : null}
             {screen === 'main-menu' && (
               <button type="button" className="start-menu__bottom-play" onClick={() => startGame(playerModeRef.current, stageRef.current)}>
-                Play
+                {t.play}
               </button>
             )}
             {screen === 'main-menu' && (
               <button type="button" className="start-menu__sign-out" onClick={signOutToRegistration}>
-                Sign out
+                {t.signOut}
               </button>
             )}
             {screen === 'main-menu' && (
-              <button type="button" className="tutorial-sign" onClick={() => setShowTutorial(true)}>
-                Tutorial
-              </button>
+              <span className="menu-sign-out-copy" aria-hidden="true">
+                {t.signOut}
+              </span>
             )}
-
-            <div className="world-carousel" aria-label="Select world">
-              <button type="button" className="world-carousel__arrow world-carousel__arrow--left" onClick={() => cycleStage(-1)}>
-                Previous world
-              </button>
-              <div className={`world-carousel__preview world-carousel__preview--${stage}`}>
-                <span>{STAGES.find((item) => item.id === stage)?.name}</span>
+            {screen === 'main-menu' && language === 'ru' && (
+              <div className="menu-copy-overlay" aria-hidden="true">
+                <span className="menu-copy menu-copy--center-play">{t.play}</span>
+                <span className="menu-copy menu-copy--center-adventure">{t.adventureMode}</span>
+                <span className="menu-copy menu-copy--center-settings">{t.menuSettings}</span>
+                <span className="menu-copy menu-copy--world-title">{t.selectWorld}</span>
+                <span className="menu-copy menu-copy--settings-title">{t.settings}</span>
+                <span className="menu-copy menu-copy--one-player">{t.onePlayer}</span>
+                <span className="menu-copy menu-copy--two-players">{t.twoPlayers}</span>
+                <span className="menu-copy menu-copy--sound">{t.sound}</span>
+                <span className="menu-copy menu-copy--language">{t.language}</span>
+                <span className="menu-copy menu-copy--reset">{t.resetProgress}</span>
+                <span className="menu-copy menu-copy--back">‹ {t.back}</span>
+                <span className="menu-copy menu-copy--bottom-play">{t.play}</span>
               </div>
-              <button type="button" className="world-carousel__arrow world-carousel__arrow--right" onClick={() => cycleStage(1)}>
-                Next world
-              </button>
-            </div>
+            )}
+            <div className="world-carousel" aria-label={t.selectWorld}>
+                <button type="button" className="world-carousel__arrow world-carousel__arrow--left" onClick={() => cycleStage(-1)}>
+                  {t.previousWorld}
+                </button>
+                <div className={`world-carousel__preview world-carousel__preview--${stage}`}>
+                  <span>{getStageName(stage)}</span>
+                </div>
+                <button type="button" className="world-carousel__arrow world-carousel__arrow--right" onClick={() => cycleStage(1)}>
+                  {t.nextWorld}
+                </button>
+              </div>
 
-            <div className={`settings-panel settings-panel--${playerMode}`} aria-label="Settings">
-              <button type="button" className="settings-panel__hotspot settings-panel__hotspot--one" onClick={() => chooseMode('1p')}>
-                {playerMode === '1p' ? 'ON' : 'OFF'}
-              </button>
-              <button type="button" className="settings-panel__hotspot settings-panel__hotspot--two" onClick={() => chooseMode('2p')}>
-                {playerMode === '2p' ? 'ON' : 'OFF'}
-              </button>
-              <label className="settings-panel__sound" aria-label="Sound volume">
-                <span>Sound</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value={soundLevel}
-                  onChange={(event) => changeSoundLevel(Number(event.target.value))}
-                />
-              </label>
-              <button type="button" className="settings-panel__hotspot settings-panel__hotspot--reset" onClick={fullReset}>
-                Reset Progress
-              </button>
-              <button type="button" className="settings-panel__hotspot settings-panel__hotspot--back" onClick={openMenu}>
-                Back
-              </button>
-            </div>
+            <div className={`settings-panel settings-panel--${playerMode}`} aria-label={t.settings}>
+                <button type="button" className="settings-panel__hotspot settings-panel__hotspot--one" onClick={() => chooseMode('1p')}>
+                  {playerMode === '1p' ? t.on : t.off}
+                </button>
+                <button type="button" className="settings-panel__hotspot settings-panel__hotspot--two" onClick={() => chooseMode('2p')}>
+                  {playerMode === '2p' ? t.on : t.off}
+                </button>
+                <label className="settings-panel__sound" aria-label={t.soundVolume}>
+                  <span>{t.sound}</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={soundLevel}
+                    onChange={(event) => changeSoundLevel(Number(event.target.value))}
+                  />
+                </label>
+                <button type="button" className="settings-panel__language" onClick={toggleLanguage}>
+                  {language.toUpperCase()}
+                </button>
+                <button type="button" className="settings-panel__hotspot settings-panel__hotspot--reset" onClick={fullReset}>
+                  {t.resetProgress}
+                </button>
+                <button type="button" className="settings-panel__hotspot settings-panel__hotspot--back" onClick={openMenu}>
+                  {t.back}
+                </button>
+              </div>
 
             <p className="start-menu__hint">
-              {screen === 'main-menu' ? 'Press Enter or Space' : 'Press 1-5 to pick a stage'}
+              {screen === 'main-menu' ? t.pressStart : t.pressStage}
             </p>
             {screen === 'main-menu' && (
-              <div className="character-roster" aria-label="Characters">
+              <div className="character-roster" aria-label={t.characters}>
                 <article className="character-roster__card character-roster__card--p1">
-                  <span>Player 1</span>
+                  <span>{t.player1}</span>
                   <strong>{CHARACTERS.p1.name}</strong>
                   <p>{CHARACTERS.p1.move}</p>
                 </article>
                 <article className="character-roster__card character-roster__card--p2">
-                  <span>Player 2</span>
+                  <span>{t.player2}</span>
                   <strong>{CHARACTERS.p2.name}</strong>
                   <p>{CHARACTERS.p2.move}</p>
                 </article>
@@ -2431,20 +2616,25 @@ function App() {
             )}
           </div>
         )}
+        {screen === 'playing' && (
+          <button type="button" className="tutorial-sign" onClick={() => setShowTutorial(true)}>
+            {t.tutorial}
+          </button>
+        )}
       </section>
 
-      <section className={`controls-grid controls-grid--${screen}`} aria-label="Controls">
+      <section className={`controls-grid controls-grid--${screen}`} aria-label={t.controls}>
         <div className="controls-card">
           <h2>{CHARACTERS.p1.name}</h2>
-          <p>A/D move, W jump, F punch, G {CHARACTERS.p1.move}, H water ball</p>
+          <p>{t.p1Controls(CHARACTERS.p1.move)}</p>
           <div className="touch-row">
             {[
-              ['Left', 'KeyA'],
-              ['Jump', 'KeyW'],
-              ['Right', 'KeyD'],
-              ['Punch', 'KeyF'],
-              ['Fire', 'KeyG'],
-              ['Water', 'KeyH'],
+              [t.left, 'KeyA'],
+              [t.jump, 'KeyW'],
+              [t.right, 'KeyD'],
+              [t.punch, 'KeyF'],
+              [t.fire, 'KeyG'],
+              [t.water, 'KeyH'],
             ].map(([label, code]) => (
               <button
                 key={code}
@@ -2461,25 +2651,25 @@ function App() {
         </div>
 
         <button type="button" className="restart-button" onClick={restart}>
-          New Round
+          {t.newRound}
         </button>
 
         <div className="controls-card">
-          <h2>{playerMode === '1p' ? `CPU ${CHARACTERS.p2.name}` : CHARACTERS.p2.name}</h2>
+          <h2>{playerMode === '1p' ? `${t.cpu} ${CHARACTERS.p2.name}` : CHARACTERS.p2.name}</h2>
           <p>
             {playerMode === '1p'
-              ? `Computer controls ${CHARACTERS.p2.name} in 1 Player mode`
-              : `Arrows move/jump, / punch, . fireball, , ${CHARACTERS.p2.move}`}
+              ? t.cpuControls(CHARACTERS.p2.name)
+              : t.p2Controls(CHARACTERS.p2.move)}
           </p>
           {playerMode === '2p' && (
             <div className="touch-row">
               {[
-                ['Left', 'ArrowLeft'],
-                ['Jump', 'ArrowUp'],
-                ['Right', 'ArrowRight'],
-                ['Punch', 'Slash'],
-                ['Fire', 'Period'],
-                ['Water', 'Comma'],
+                [t.left, 'ArrowLeft'],
+                [t.jump, 'ArrowUp'],
+                [t.right, 'ArrowRight'],
+                [t.punch, 'Slash'],
+                [t.fire, 'Period'],
+                [t.water, 'Comma'],
               ].map(([label, code]) => (
                 <button
                   key={code}
@@ -2497,34 +2687,34 @@ function App() {
         </div>
       </section>
       <div className="rotate-phone" role="status" aria-live="polite">
-        <strong>Flip your phone</strong>
-        <span>Turn sideways to play</span>
+        <strong>{t.rotateTitle}</strong>
+        <span>{t.rotateBody}</span>
       </div>
       {showTutorial && (
-        <section className="tutorial-modal" role="dialog" aria-modal="true" aria-label="Tutorial">
+        <section className="tutorial-modal" role="dialog" aria-modal="true" aria-label={t.tutorial}>
           <div className="tutorial-card">
-            <h2>Tutorial</h2>
-            <p>Pick a world, choose 1 Player or 2 Players, then press Play.</p>
+            <h2>{t.tutorial}</h2>
+            <p>{t.tutorialIntro}</p>
             <div className="tutorial-grid">
               <div>
-                <h3>Player 1</h3>
-                <p>A/D move, W jump, F punch, G fireball, H water ball.</p>
+                <h3>{t.player1}</h3>
+                <p>{t.tutorialP1}</p>
               </div>
               <div>
-                <h3>Player 2</h3>
-                <p>Arrow keys move and jump, / punch, . fireball, , water ball.</p>
+                <h3>{t.player2}</h3>
+                <p>{t.tutorialP2}</p>
               </div>
               <div>
-                <h3>Pause</h3>
-                <p>Esc pauses. Space continues. Esc again opens the menu.</p>
+                <h3>{t.pause}</h3>
+                <p>{t.tutorialPause}</p>
               </div>
               <div>
-                <h3>Mobile</h3>
-                <p>Turn your phone sideways. Touch controls appear during the fight.</p>
+                <h3>{t.mobile}</h3>
+                <p>{t.tutorialMobile}</p>
               </div>
             </div>
             <button type="button" onClick={closeTutorial}>
-              Got it
+              {t.gotIt}
             </button>
           </div>
         </section>
