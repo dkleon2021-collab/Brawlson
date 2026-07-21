@@ -669,7 +669,13 @@ button:active {
 .start-menu--mode-menu h2,
 .start-menu--mode-menu .start-menu__eyebrow,
 .start-menu--map-menu h2,
-.start-menu--map-menu .start-menu__eyebrow {
+.start-menu--map-menu .start-menu__eyebrow,
+.start-menu--adventure-splash h2,
+.start-menu--adventure-splash .start-menu__eyebrow,
+.start-menu--adventure-video h2,
+.start-menu--adventure-video .start-menu__eyebrow,
+.start-menu--adventure-start-video h2,
+.start-menu--adventure-start-video .start-menu__eyebrow {
   opacity: 0;
   pointer-events: none;
 }
@@ -753,6 +759,34 @@ button:active {
   outline-offset: 4px;
 }
 
+.start-menu__adventure {
+  position: absolute;
+  left: 42.7%;
+  top: 26.4%;
+  z-index: 2;
+  width: 17.3%;
+  height: 6.4%;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  color: transparent;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.start-menu__adventure:hover,
+.start-menu__adventure:active {
+  filter: none;
+  transform: none;
+}
+
+.start-menu__adventure:focus-visible {
+  outline: 3px solid #ffb31a;
+  outline-offset: 4px;
+}
+
 .start-menu__bottom-play {
   position: absolute;
   left: 38.6%;
@@ -812,6 +846,144 @@ button:active {
 
 .start-menu--main-menu .start-menu__hint {
   display: none;
+}
+
+.start-menu--adventure-video .start-menu__hint {
+  display: none;
+}
+
+.start-menu--adventure-start-video .start-menu__hint {
+  display: none;
+}
+
+.start-menu--adventure-splash .start-menu__hint {
+  display: none;
+}
+
+.adventure-splash-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  background: #020611;
+}
+
+.adventure-splash-panel img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adventure-splash-panel__start {
+  position: absolute;
+  left: 34%;
+  top: 80%;
+  z-index: 3;
+  width: 32%;
+  height: 12%;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  color: transparent;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.adventure-splash-panel__start:hover,
+.adventure-splash-panel__start:active {
+  filter: none;
+  transform: none;
+}
+
+.adventure-splash-panel__start:focus-visible {
+  outline: 3px solid #ffb31a;
+  outline-offset: 4px;
+}
+
+.adventure-video-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  background: #020611;
+}
+
+.adventure-video-panel__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #020611;
+}
+
+.adventure-video-panel__caption {
+  position: absolute;
+  left: 50%;
+  bottom: 7.5%;
+  z-index: 2;
+  width: min(86%, 980px);
+  margin: 0;
+  padding: 14px 18px;
+  color: #fff1c7;
+  background: rgba(2, 6, 17, 0.68);
+  font-family: "Geist Pixel", sans-serif;
+  font-optical-sizing: auto;
+  font-size: clamp(16px, 2.4vw, 34px);
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "ELSH" 0;
+  letter-spacing: 0;
+  line-height: 1.12;
+  text-align: center;
+  text-shadow: 3px 3px 0 #020611;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.adventure-video-panel__back,
+.adventure-video-panel__skip {
+  position: absolute;
+  top: 18px;
+  z-index: 2;
+  min-height: 38px;
+  border: 3px solid #f0a51b;
+  border-radius: 0;
+  padding: 8px 14px;
+  color: #fff1c7;
+  background: rgba(7, 16, 24, 0.82);
+  box-shadow:
+    0 0 0 3px #2a1708,
+    inset 0 0 0 2px #473016,
+    inset 3px 3px 0 rgba(255, 196, 82, 0.16),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.62);
+  font-family: "Geist Pixel", sans-serif;
+  font-optical-sizing: auto;
+  font-size: clamp(14px, 1.6vw, 22px);
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "ELSH" 0;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 #020611;
+}
+
+.adventure-video-panel__back {
+  left: 18px;
+}
+
+.adventure-video-panel__skip {
+  right: 18px;
+}
+
+.adventure-video-panel__back:hover,
+.adventure-video-panel__back:active,
+.adventure-video-panel__skip:hover,
+.adventure-video-panel__skip:active {
+  color: #ffb31a;
+  transform: translateY(1px);
 }
 
 .world-carousel {
@@ -1523,6 +1695,7 @@ canvas {
 @media (max-width: 900px) and (orientation: landscape) {
   body {
     overflow: hidden;
+    touch-action: none;
   }
 
   .game-shell {
@@ -1537,55 +1710,125 @@ canvas {
     box-shadow: none;
   }
 
-  .controls-grid--playing {
+  .controls-grid--playing,
+  .controls-grid--adventure-level {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 8;
+    z-index: 15;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: minmax(174px, 0.9fr) 1fr minmax(174px, 0.9fr);
+    gap: 10px;
     align-items: end;
-    padding: 6px 8px 8px;
+    padding: 0 12px 10px;
     pointer-events: none;
   }
 
   .controls-grid--playing .controls-card,
-  .controls-grid--playing .restart-button {
+  .controls-grid--adventure-level .controls-card {
     pointer-events: auto;
   }
 
-  .controls-grid--playing .controls-card {
-    border-width: 3px;
-    padding: 6px;
-    background: rgba(12, 10, 18, 0.66);
-    box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.24), inset 4px 4px 0 rgba(255, 255, 255, 0.06);
-  }
-
-  .controls-grid--playing .controls-card h2,
-  .controls-grid--playing .controls-card p {
+  .controls-grid--playing .restart-button,
+  .controls-grid--adventure-level .restart-button {
     display: none;
   }
 
-  .controls-grid--playing .touch-row {
-    grid-template-columns: repeat(3, minmax(46px, 1fr));
-    gap: 6px;
+  .controls-grid--playing .controls-card,
+  .controls-grid--adventure-level .controls-card {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
-  .controls-grid--playing .touch-row button {
-    min-height: 38px;
-    padding: 0 4px;
-    border-width: 2px;
-    font-size: 10px;
+  .controls-grid--playing .controls-card h2,
+  .controls-grid--playing .controls-card p,
+  .controls-grid--adventure-level .controls-card h2,
+  .controls-grid--adventure-level .controls-card p {
+    display: none;
   }
 
-  .controls-grid--playing .restart-button {
-    min-width: 72px;
-    min-height: 38px;
-    padding: 0 6px;
-    border-width: 2px;
+  .controls-grid--playing .touch-row,
+  .controls-grid--adventure-level .touch-row {
+    display: grid;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(2, 56px);
+    gap: 9px;
+    align-items: center;
+    justify-content: start;
+  }
+
+  .controls-grid--playing .controls-card:last-child .touch-row {
+    justify-content: end;
+  }
+
+  .controls-grid--playing .touch-row button,
+  .controls-grid--adventure-level .touch-row button {
+    width: 56px;
+    height: 56px;
+    min-height: 56px;
+    border: 3px solid rgba(255, 248, 214, 0.85);
+    border-radius: 50%;
+    padding: 0;
+    background: rgba(7, 16, 24, 0.72);
+    color: #fff8d6;
+    box-shadow:
+      0 4px 0 rgba(0, 0, 0, 0.55),
+      inset 0 0 0 3px rgba(255, 179, 26, 0.28);
     font-size: 10px;
+    line-height: 1;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .controls-grid--playing .touch-row button:active,
+  .controls-grid--adventure-level .touch-row button:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.55),
+      inset 0 0 0 3px rgba(122, 240, 255, 0.34);
+  }
+
+  .touch-button--KeyA,
+  .touch-button--ArrowLeft {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .touch-button--KeyW,
+  .touch-button--ArrowUp {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .touch-button--KeyD,
+  .touch-button--ArrowRight {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .touch-button--KeyF,
+  .touch-button--Slash {
+    grid-column: 1;
+    grid-row: 2;
+    background: rgba(255, 79, 120, 0.78) !important;
+  }
+
+  .touch-button--KeyG,
+  .touch-button--Period {
+    grid-column: 2;
+    grid-row: 1;
+    background: rgba(255, 176, 46, 0.8) !important;
+  }
+
+  .touch-button--KeyH,
+  .touch-button--Comma {
+    grid-column: 3;
+    grid-row: 2;
+    background: rgba(45, 190, 255, 0.78) !important;
   }
 }
 

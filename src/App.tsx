@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { Auth } from './components/Auth';
 import { supabase } from './lib/supabase';
 
@@ -48,6 +48,73 @@ type GameState = {
   message: string;
 };
 
+type AdventureRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type AdventureBoss = AdventureRect & {
+  health: number;
+  maxHealth: number;
+  vx: number;
+  minX: number;
+  maxX: number;
+  facing: 1 | -1;
+  action: 'spawn' | 'walk' | 'slam' | 'whip' | 'summon' | 'damage' | 'death';
+  actionTimer: number;
+  attackCooldown: number;
+  hasSummoned: boolean;
+};
+
+type AdventureMinion = AdventureRect & {
+  vx: number;
+  minX: number;
+  maxX: number;
+  health: number;
+  facing: 1 | -1;
+  action: 'spawn' | 'idle' | 'walk' | 'damage' | 'death';
+  actionTimer: number;
+};
+
+type AdventureShot = {
+  x: number;
+  y: number;
+  vx: number;
+  age: number;
+  element?: 'fire' | 'vine';
+};
+
+type AdventurePlayer = AdventureRect & {
+  vx: number;
+  vy: number;
+  facing: 1 | -1;
+  grounded: boolean;
+  health: number;
+  fireCooldown: number;
+  punchCooldown: number;
+  invincible: number;
+  stamina: number;
+};
+
+type AdventureState = {
+  player: AdventurePlayer;
+  boss: AdventureBoss;
+  minions: AdventureMinion[];
+  shots: AdventureShot[];
+  minionPortal: { x: number; y: number; timer: number };
+  chapter: number;
+  crystals: number;
+  bossName: string;
+  travelerMet: boolean;
+  travelerDialogueIndex: number;
+  postBossTimer: number;
+  cameraShake: number;
+  message: string;
+  won: boolean;
+};
+
 type Hud = {
   p1Health: number;
   p2Health: number;
@@ -59,11 +126,25 @@ type Hud = {
 };
 
 type AppView = 'registration' | 'game';
-type GameScreen = 'main-menu' | 'mode-menu' | 'map-menu' | 'playing';
+type GameScreen =
+  | 'main-menu'
+  | 'mode-menu'
+  | 'map-menu'
+  | 'adventure-splash'
+  | 'adventure-video'
+  | 'adventure-start-video'
+  | 'adventure-level'
+  | 'playing';
 type PlayerMode = '1p' | '2p';
 type StageId = 'desert' | 'space' | 'ocean' | 'forest' | 'hell';
 type Language = 'en' | 'ru';
 type SpriteFrame = { x: number; y: number; width: number; height: number };
+type AdventureProgress = {
+  introIndex: number;
+  introComplete: boolean;
+  journeyVideoComplete: boolean;
+  phase: 'intro' | 'splash' | 'journey-video' | 'boss';
+};
 
 const STAGES: Array<{ id: StageId; name: string; number: string }> = [
   { id: 'forest', name: 'Forest', number: '1' },
@@ -111,6 +192,21 @@ const TEXT = {
     gameTitle: 'Brawlson',
     play: 'Play',
     adventureMode: 'Adventure Mode',
+    adventureIntro: 'For centuries the pixel world was held together by one divine crystal',
+    adventureIntroDark: 'Until one day a dark figure stole the crystal and vanished',
+    adventureIntroChaos: 'Without its power the world fell into chaos',
+    adventureIntroHero: 'There is only one hero who can restore balance',
+    adventureJourney: 'Begin your quest',
+    travelerCrystalRumor: [
+      'Hello, what are you doing here?',
+      "This place, it's full of mysteries.",
+      "I've heard rumors of an ancient crystal hidden beyond these gates.",
+      'But something dark has awakened...',
+      "If you truly seek the crystal, you'd better be ready.",
+    ],
+    travelerAfterBoss: 'You did it... but that was only the beginning.',
+    crystalCollected: '1/5 Pixel Crystals',
+    nextBossPreview: 'Next boss approaches...',
     menuSettings: 'Settings',
     previousWorld: 'Previous world',
     nextWorld: 'Next world',
@@ -124,6 +220,7 @@ const TEXT = {
     level: 'Lv. 12',
     resetProgress: 'Reset Progress',
     back: 'Back',
+    skip: 'Skip to Start',
     pressStart: 'Press Enter or Space',
     pressStage: 'Press 1-5 to pick a stage',
     tutorial: 'Tutorial',
@@ -142,6 +239,10 @@ const TEXT = {
     tutorialP2: 'Arrow keys move and jump, / punch, . fireball, , water ball.',
     tutorialPause: 'Esc pauses. Space continues. Esc again opens the menu.',
     tutorialMobile: 'Turn your phone sideways. Touch controls appear during the fight.',
+    adventureTutorialIntro: 'Defeat the Forest Guardian. Watch your stamina and do not spam fireballs.',
+    adventureTutorialMove: 'A/D or Arrow keys move. W, Arrow Up, or Space jumps.',
+    adventureTutorialAttack: 'F punches nearby enemies. G shoots a fireball when stamina is ready.',
+    adventureTutorialStamina: 'Fireballs spend stamina. The yellow bar refills over time.',
     gotIt: 'Got it',
     left: 'Left',
     jump: 'Jump',
@@ -174,6 +275,21 @@ const TEXT = {
     gameTitle: 'Brawlson',
     play: 'Играть',
     adventureMode: 'Приключение',
+    adventureIntro: 'Веками пиксельный мир держался на одном божественном кристалле',
+    adventureIntroDark: 'Однажды темная фигура украла кристалл и исчезла',
+    adventureIntroChaos: 'Без его силы мир погрузился в хаос',
+    adventureIntroHero: 'Есть только один герой, способный вернуть равновесие',
+    adventureJourney: 'Начни свой путь',
+    travelerCrystalRumor: [
+      'Привет, что ты здесь делаешь?',
+      'Это место полно тайн.',
+      'Я слышал слухи о древнем кристалле, скрытом за этими вратами.',
+      'Но пробудилось что-то темное...',
+      'Если ты правда ищешь кристалл, тебе лучше быть готовым.',
+    ],
+    travelerAfterBoss: 'У тебя получилось... но это только начало.',
+    crystalCollected: '1/5 Пиксельных кристаллов',
+    nextBossPreview: 'Следующий босс приближается...',
     menuSettings: 'Настройки',
     previousWorld: 'Предыдущий мир',
     nextWorld: 'Следующий мир',
@@ -187,6 +303,7 @@ const TEXT = {
     level: 'Ур. 12',
     resetProgress: 'Сбросить прогресс',
     back: 'Назад',
+    skip: 'К началу',
     pressStart: 'Нажми Enter или Space',
     pressStage: 'Нажми 1-5 чтобы выбрать этап',
     tutorial: 'Обучение',
@@ -205,6 +322,10 @@ const TEXT = {
     tutorialP2: 'Стрелки движение и прыжок, / удар, . огонь, , вода.',
     tutorialPause: 'Esc ставит паузу. Space продолжает. Esc снова открывает меню.',
     tutorialMobile: 'Поверни телефон боком. Сенсорные кнопки появятся во время боя.',
+    adventureTutorialIntro: 'Победи Лесного Стража. Следи за выносливостью и не спамь огнем.',
+    adventureTutorialMove: 'A/D или стрелки двигают. W, стрелка вверх или Space прыжок.',
+    adventureTutorialAttack: 'F бьет врагов рядом. G стреляет огнем, если есть выносливость.',
+    adventureTutorialStamina: 'Огненные шары тратят выносливость. Желтая полоска восстанавливается.',
     gotIt: 'Понятно',
     left: 'Влево',
     jump: 'Прыжок',
@@ -293,6 +414,106 @@ const KAZAN_SPRITES: Record<'idle' | 'walk' | 'jab' | 'shoot', SpriteFrame[]> = 
   ],
 };
 
+const FOREST_GUARDIAN_SPRITES: Record<
+  'idle' | 'walk' | 'slam' | 'summon',
+  SpriteFrame[]
+> = {
+  idle: [34, 263, 480, 687, 891, 1085].map((x) => ({
+    x,
+    y: 66,
+    width: 164,
+    height: 178,
+  })),
+  walk: [34, 232, 421, 610, 790, 970, 1155, 1344].map((x) => ({
+    x,
+    y: 319,
+    width: 156,
+    height: 170,
+  })),
+  summon: [34, 274, 512, 746, 973, 1184].map((x) => ({
+    x,
+    y: 560,
+    width: 174,
+    height: 170,
+  })),
+  slam: [32, 222, 413, 599, 789, 974, 1165, 1354].map((x) => ({
+    x,
+    y: 800,
+    width: 160,
+    height: 168,
+  })),
+};
+
+const FOREST_GUARDIAN_WHIP_SPRITES: SpriteFrame[] = [
+  { x: 20, y: 202, width: 330, height: 300 },
+  { x: 378, y: 202, width: 330, height: 300 },
+  { x: 740, y: 202, width: 330, height: 300 },
+  { x: 1102, y: 202, width: 360, height: 300 },
+  { x: 1486, y: 202, width: 330, height: 300 },
+  { x: 1830, y: 202, width: 324, height: 300 },
+];
+
+const FOREST_GUIDE_IDLE_SPRITES: SpriteFrame[] = [
+  { x: 24, y: 50, width: 130, height: 208 },
+  { x: 156, y: 50, width: 130, height: 208 },
+  { x: 290, y: 50, width: 130, height: 208 },
+  { x: 424, y: 50, width: 130, height: 208 },
+];
+
+const FOREST_GUARDIAN_MINION_SPRITES: Record<'spawn' | 'idle' | 'walk' | 'damage' | 'death', SpriteFrame[]> = {
+  spawn: [24, 248, 459, 669, 876, 1085].map((x) => ({
+    x: x + 8,
+    y: 55,
+    width: 194,
+    height: 164,
+  })),
+  idle: [26, 235, 445, 654, 864, 1073].map((x) => ({
+    x: x + 8,
+    y: 288,
+    width: 182,
+    height: 146,
+  })),
+  walk: [24, 201, 379, 548, 720, 865, 1019, 1172, 1348].map((x) => ({
+    x: x + 8,
+    y: 505,
+    width: 150,
+    height: 122,
+  })),
+  damage: [25, 245, 455, 666].map((x) => ({
+    x: x + 8,
+    y: 690,
+    width: 189,
+    height: 120,
+  })),
+  death: [25, 236, 455, 675, 908, 1130].map((x) => ({
+    x: x + 8,
+    y: 878,
+    width: 184,
+    height: 109,
+  })),
+};
+
+const FOREST_GUARDIAN_EXTRA_SPRITES: Record<'spawn' | 'damage' | 'death', SpriteFrame[]> = {
+  spawn: [24, 252, 484, 714, 964, 1156].map((x) => ({
+    x: x + 8,
+    y: 60,
+    width: 196,
+    height: 182,
+  })),
+  damage: [20, 253, 485, 717, 947, 1176].map((x) => ({
+    x: x + 8,
+    y: 320,
+    width: 196,
+    height: 178,
+  })),
+  death: [20, 260, 499, 738, 967, 1197].map((x) => ({
+    x: x + 8,
+    y: 568,
+    width: 196,
+    height: 174,
+  })),
+};
+
 const WIDTH = 960;
 const HEIGHT = 540;
 const GROUND = 438;
@@ -303,6 +524,84 @@ const FRICTION = 0.78;
 const SHOT_ANIMATION_TIME = 28;
 const FIRE_SOUND_START = 0.76;
 const TUTORIAL_STORAGE_KEY = 'brawlson:tutorial-seen';
+const ADVENTURE_PROGRESS_STORAGE_KEY = 'pixel-quest:adventure-progress';
+const TRAVELER_X = 784;
+const DEFAULT_ADVENTURE_PROGRESS: AdventureProgress = {
+  introIndex: 0,
+  introComplete: false,
+  journeyVideoComplete: false,
+  phase: 'intro',
+};
+const ADVENTURE_NARRATION_SEGMENTS: Record<Language, Array<{ start: number; end: number }>> = {
+  en: [
+    { start: 0, end: 4.55 },
+    { start: 4.55, end: 8.3 },
+    { start: 8.3, end: 11.45 },
+    { start: 11.45, end: 14.99 },
+  ],
+  ru: [
+    { start: 0, end: 3.45 },
+    { start: 3.9, end: 7.1 },
+    { start: 7.75, end: 10.2 },
+    { start: 10.6, end: 14.15 },
+  ],
+};
+
+const getMinionHitbox = (minion: AdventureMinion): AdventureRect => ({
+  x: minion.x - 18,
+  y: minion.y - 14,
+  width: minion.width + 36,
+  height: minion.height + 24,
+});
+
+const createAdventureState = (chapter = 1, crystals = 0): AdventureState => {
+  const isFirstBoss = chapter === 1;
+  return {
+    player: {
+      x: 170,
+      y: 354,
+      width: 42,
+      height: 90,
+      vx: 0,
+      vy: 0,
+      facing: 1,
+      grounded: false,
+      health: 3,
+      fireCooldown: 0,
+      punchCooldown: 0,
+      invincible: 0,
+      stamina: 100,
+    },
+    boss: {
+      x: 592,
+      y: 330,
+      width: 90,
+      height: 112,
+      health: isFirstBoss ? 18 : 22,
+      maxHealth: isFirstBoss ? 18 : 22,
+      vx: 1.25,
+      minX: 430,
+      maxX: 720,
+      facing: -1,
+      action: 'spawn',
+      actionTimer: 96,
+      attackCooldown: 90,
+      hasSummoned: false,
+    },
+    minions: [],
+    shots: [],
+    minionPortal: { x: 0, y: 0, timer: 0 },
+    chapter,
+    crystals,
+    bossName: isFirstBoss ? 'FOREST GUARDIAN' : 'SHADOW GUARDIAN',
+    travelerMet: !isFirstBoss,
+    travelerDialogueIndex: -1,
+    postBossTimer: 0,
+    cameraShake: 0,
+    message: isFirstBoss ? 'Forest Guardian' : 'Next boss fight begins',
+    won: false,
+  };
+};
 
 const makeFighter = (
   x: number,
@@ -341,6 +640,12 @@ const createGame = (): GameState => ({
 
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
+
+const rectsOverlap = (a: AdventureRect, b: AdventureRect) =>
+  a.x < b.x + b.width &&
+  a.x + a.width > b.x &&
+  a.y < b.y + b.height &&
+  a.y + a.height > b.y;
 
 const getShootFrameIndex = (shotTimer: number, frameCount: number) => {
   if (frameCount <= 1) return 0;
@@ -393,18 +698,23 @@ const hitFighter = (
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const adventureVideoRef = useRef<HTMLVideoElement | null>(null);
   const gameRef = useRef<GameState>(createGame());
+  const adventureRef = useRef<AdventureState>(createAdventureState());
   const keysRef = useRef<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
   const fireSoundRef = useRef<HTMLAudioElement | null>(null);
   const waterSoundRef = useRef<HTMLAudioElement | null>(null);
   const punchSoundRef = useRef<HTMLAudioElement | null>(null);
+  const adventureNarrationRef = useRef<HTMLAudioElement | null>(null);
+  const adventureNarrationTimerRef = useRef<number | null>(null);
   const screenRef = useRef<GameScreen>('main-menu');
   const pausedRef = useRef(false);
   const playerModeRef = useRef<PlayerMode>('1p');
   const stageRef = useRef<StageId>('forest');
   const languageRef = useRef<Language>('en');
   const soundLevelRef = useRef(7);
+  const lastTravelerDialogueAdvanceRef = useRef(0);
   const kazanSheetRef = useRef<HTMLImageElement | null>(null);
   const kazanFrameCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const riptideSheetRef = useRef<HTMLImageElement | null>(null);
@@ -414,6 +724,15 @@ function App() {
   const oceanStageRef = useRef<HTMLImageElement | null>(null);
   const forestStageRef = useRef<HTMLImageElement | null>(null);
   const hellStageRef = useRef<HTMLImageElement | null>(null);
+  const forestBossArenaRef = useRef<HTMLImageElement | null>(null);
+  const forestGuideSheetRef = useRef<HTMLImageElement | null>(null);
+  const forestGuideFrameCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
+  const forestGuardianSheetRef = useRef<HTMLImageElement | null>(null);
+  const forestGuardianWhipSheetRef = useRef<HTMLImageElement | null>(null);
+  const forestGuardianFrameCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
+  const forestGuardianExtraSheetRef = useRef<HTMLImageElement | null>(null);
+  const forestGuardianMinionSheetRef = useRef<HTMLImageElement | null>(null);
+  const forestGuardianMinionFrameCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const rafRef = useRef<number>();
   const [view, setView] = useState<AppView>('registration');
   const [screen, setScreen] = useState<GameScreen>('main-menu');
@@ -423,6 +742,7 @@ function App() {
   const [soundLevel, setSoundLevel] = useState(7);
   const [language, setLanguage] = useState<Language>('en');
   const [showTutorial, setShowTutorial] = useState(false);
+  const [adventureVideoIndex, setAdventureVideoIndex] = useState(0);
   const [hud, setHud] = useState<Hud>({
     p1Health: 100,
     p2Health: 100,
@@ -553,6 +873,7 @@ function App() {
     if (fireSoundRef.current) fireSoundRef.current.volume = Math.min(1, level);
     if (waterSoundRef.current) waterSoundRef.current.volume = Math.min(1, level);
     if (punchSoundRef.current) punchSoundRef.current.volume = Math.min(1, level);
+    if (adventureNarrationRef.current) adventureNarrationRef.current.volume = Math.min(1, level);
   };
 
   const changeSoundLevel = (nextLevel: number) => {
@@ -561,7 +882,47 @@ function App() {
     applySoundVolume();
   };
 
+  const stopAdventureNarration = () => {
+    if (adventureNarrationTimerRef.current !== null) {
+      window.clearTimeout(adventureNarrationTimerRef.current);
+      adventureNarrationTimerRef.current = null;
+    }
+    if (!adventureNarrationRef.current) return;
+    adventureNarrationRef.current.pause();
+    adventureNarrationRef.current.currentTime = 0;
+  };
+
+  const pauseAdventureNarration = () => {
+    if (adventureNarrationTimerRef.current !== null) {
+      window.clearTimeout(adventureNarrationTimerRef.current);
+      adventureNarrationTimerRef.current = null;
+    }
+    adventureNarrationRef.current?.pause();
+  };
+
+  const playAdventureNarrationSegment = (sceneIndex: number) => {
+    pauseAdventureNarration();
+    const narrationSrc =
+      languageRef.current === 'ru'
+        ? '/stages/adventure-narration-ru.mp3'
+        : '/stages/adventure-narration-en.mp3';
+    const segment = ADVENTURE_NARRATION_SEGMENTS[languageRef.current][sceneIndex];
+    if (!segment) return;
+    const level = getSoundLevel();
+    if (!adventureNarrationRef.current || !adventureNarrationRef.current.src.endsWith(narrationSrc)) {
+      adventureNarrationRef.current = new Audio(narrationSrc);
+    }
+    adventureNarrationRef.current.volume = Math.min(1, level);
+    adventureNarrationRef.current.currentTime = segment.start;
+    void adventureNarrationRef.current.play();
+    adventureNarrationTimerRef.current = window.setTimeout(() => {
+      adventureNarrationTimerRef.current = null;
+      adventureNarrationRef.current?.pause();
+    }, Math.max(0, segment.end - segment.start) * 1000);
+  };
+
   const startGame = (mode: PlayerMode, selectedStage: StageId) => {
+    stopAdventureNarration();
     if (!fireSoundRef.current) {
       fireSoundRef.current = new Audio('/sounds/fire-swoosh.wav');
       fireSoundRef.current.load();
@@ -601,6 +962,17 @@ function App() {
       p2Wins: 0,
       message: `${modeLabel} - ${stageName}`,
     });
+  };
+
+  const startAdventureLevel = () => {
+    stopAdventureNarration();
+    saveAdventureProgress({ introComplete: true, journeyVideoComplete: true, phase: 'boss' });
+    adventureRef.current = createAdventureState();
+    keysRef.current.clear();
+    pausedRef.current = false;
+    screenRef.current = 'adventure-level';
+    setScreen('adventure-level');
+    setPaused(false);
   };
 
   useEffect(() => {
@@ -685,7 +1057,64 @@ function App() {
       hellStageRef.current = hellStage;
     };
 
+    const forestBossArena = new Image();
+    forestBossArena.src = '/stages/forgotten-forest-boss-arena.png';
+    forestBossArena.onload = () => {
+      forestBossArenaRef.current = forestBossArena;
+    };
+
+    const forestGuideSheet = new Image();
+    forestGuideSheet.src = '/sprites/forest-guide-sheet.png?v=1';
+    forestGuideSheet.onload = () => {
+      forestGuideSheetRef.current = forestGuideSheet;
+    };
+
+    const forestGuardianSheet = new Image();
+    forestGuardianSheet.src = '/sprites/forest-guardian-sheet.png?v=6';
+    forestGuardianSheet.onload = () => {
+      forestGuardianSheetRef.current = forestGuardianSheet;
+    };
+
+    const forestGuardianWhipSheet = new Image();
+    forestGuardianWhipSheet.src = '/sprites/forest-guardian-whip-sheet.png?v=1';
+    forestGuardianWhipSheet.onload = () => {
+      forestGuardianWhipSheetRef.current = forestGuardianWhipSheet;
+    };
+
+    const forestGuardianExtraSheet = new Image();
+    forestGuardianExtraSheet.src = '/sprites/forest-guardian-extra-sheet.png?v=3';
+    forestGuardianExtraSheet.onload = () => {
+      forestGuardianExtraSheetRef.current = forestGuardianExtraSheet;
+    };
+
+    const forestGuardianMinionSheet = new Image();
+    forestGuardianMinionSheet.src = '/sprites/forest-guardian-minion-sheet.png?v=4';
+    forestGuardianMinionSheet.onload = () => {
+      forestGuardianMinionSheetRef.current = forestGuardianMinionSheet;
+    };
+
+    const advanceTravelerDialogue = () => {
+      const state = adventureRef.current;
+      if (screenRef.current !== 'adventure-level' || !state.travelerMet || state.travelerDialogueIndex < 0) return false;
+      const now = performance.now();
+      if (now - lastTravelerDialogueAdvanceRef.current < 120) return true;
+      lastTravelerDialogueAdvanceRef.current = now;
+      const lineCount = TEXT[languageRef.current].travelerCrystalRumor.length;
+      if (state.travelerDialogueIndex < lineCount - 1) {
+        state.travelerDialogueIndex += 1;
+      } else {
+        state.travelerDialogueIndex = -1;
+      }
+      keysRef.current.clear();
+      return true;
+    };
+
     const onKeyDown = (event: KeyboardEvent) => {
+      if (advanceTravelerDialogue()) {
+        event.preventDefault();
+        return;
+      }
+
       if (event.code === 'Escape' && screenRef.current === 'playing') {
         if (pausedRef.current) {
           pausedRef.current = false;
@@ -707,6 +1136,35 @@ function App() {
         pausedRef.current = false;
         keysRef.current.clear();
         setPaused(false);
+        event.preventDefault();
+        return;
+      }
+
+      if (screenRef.current === 'adventure-level' && (event.code === 'Escape' || event.code === 'Backspace')) {
+        openMenu();
+        event.preventDefault();
+        return;
+      }
+
+      if (screenRef.current === 'adventure-video' && event.code === 'KeyS') {
+        openAdventureSplash();
+        event.preventDefault();
+        return;
+      }
+
+      if (screenRef.current === 'adventure-start-video' && event.code === 'KeyS') {
+        finishAdventureJourneyVideo();
+        event.preventDefault();
+        return;
+      }
+
+      if (
+        (screenRef.current === 'adventure-splash' ||
+          screenRef.current === 'adventure-video' ||
+          screenRef.current === 'adventure-start-video') &&
+        (event.code === 'Escape' || event.code === 'Backspace')
+      ) {
+        openMenu();
         event.preventDefault();
         return;
       }
@@ -773,10 +1231,664 @@ function App() {
       keysRef.current.delete(event.code);
     };
 
+    const onDialogueInput = (event: Event) => {
+      if (advanceTravelerDialogue()) event.preventDefault();
+    };
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('pointerdown', onDialogueInput, true);
+    window.addEventListener('mousedown', onDialogueInput, true);
+    window.addEventListener('click', onDialogueInput, true);
+    window.addEventListener('touchstart', onDialogueInput, { capture: true, passive: false });
 
     let lastHud = 0;
+
+    const adventurePlatforms: AdventureRect[] = [
+      { x: 74, y: 444, width: 812, height: 34 },
+      { x: 108, y: 348, width: 28, height: 96 },
+      { x: 168, y: 292, width: 116, height: 20 },
+      { x: 380, y: 258, width: 192, height: 22 },
+      { x: 678, y: 292, width: 116, height: 20 },
+      { x: 808, y: 348, width: 28, height: 96 },
+    ];
+
+    const damageAdventurePlayer = (state: AdventureState) => {
+      const player = state.player;
+      if (player.invincible > 0) return;
+      state.cameraShake = Math.max(state.cameraShake, 14);
+      player.health -= 1;
+      player.invincible = 70;
+      if (player.health <= 0) {
+        adventureRef.current = createAdventureState();
+        adventureRef.current.message = 'Try again';
+        adventureRef.current.cameraShake = 18;
+        return;
+      }
+      player.vx = -player.facing * 6;
+      player.vy = -9;
+      state.message = 'Ouch!';
+    };
+
+    const updateAdventure = () => {
+      const state = adventureRef.current;
+      const { player, boss } = state;
+      const keys = keysRef.current;
+      if (state.won) {
+        state.postBossTimer += 1;
+        player.vx *= 0.86;
+        player.fireCooldown = Math.max(0, player.fireCooldown - 1);
+        player.punchCooldown = Math.max(0, player.punchCooldown - 1);
+        state.cameraShake = Math.max(0, state.cameraShake - 0.75);
+        if (state.postBossTimer === 135) {
+          state.crystals = Math.max(state.crystals, 1);
+          state.message = TEXT[languageRef.current].crystalCollected;
+        }
+        if (state.postBossTimer > 520) {
+          adventureRef.current = createAdventureState(state.chapter + 1, Math.max(state.crystals, 1));
+          adventureRef.current.cameraShake = 12;
+        }
+        return;
+      }
+
+      if (keys.has('KeyA') || keys.has('ArrowLeft')) {
+        player.vx = Math.max(player.vx - 0.75, -5.2);
+        player.facing = -1;
+      } else if (keys.has('KeyD') || keys.has('ArrowRight')) {
+        player.vx = Math.min(player.vx + 0.75, 5.2);
+        player.facing = 1;
+      } else {
+        player.vx *= player.grounded ? 0.78 : 0.9;
+      }
+
+      if ((keys.has('KeyW') || keys.has('ArrowUp') || keys.has('Space')) && player.grounded) {
+        player.vy = -14;
+        player.grounded = false;
+      }
+
+      const attacksLockedBeforeBoss = boss.action === 'spawn' && (!state.travelerMet || state.travelerDialogueIndex >= 0 || boss.actionTimer > 58);
+
+      if (keys.has('KeyF') && player.punchCooldown <= 0 && !attacksLockedBeforeBoss) {
+        const punchBox = {
+          x: player.x + (player.facing === 1 ? player.width - 2 : -42),
+          y: player.y + 24,
+          width: 44,
+          height: 42,
+        };
+        let hitSomething = false;
+        state.minions.forEach((minion) => {
+          if (minion.health > 0 && minion.action !== 'spawn' && rectsOverlap(punchBox, getMinionHitbox(minion))) {
+            minion.health -= 1;
+            minion.action = minion.health <= 0 ? 'death' : 'damage';
+            minion.actionTimer = minion.health <= 0 ? 44 : 22;
+            hitSomething = true;
+          }
+        });
+        if (boss.health > 0 && rectsOverlap(punchBox, boss)) {
+          boss.health -= 1;
+          boss.action = boss.health <= 0 ? 'death' : 'damage';
+          boss.actionTimer = boss.health <= 0 ? 96 : 34;
+          state.message = boss.health <= 0 ? 'Guardian defeated' : `Forest Guardian ${boss.health}/${boss.maxHealth}`;
+          hitSomething = true;
+        }
+        player.punchCooldown = 22;
+        state.cameraShake = Math.max(state.cameraShake, hitSomething ? 8 : 2);
+        playPunchSound();
+      }
+
+      if (keys.has('KeyG') && player.fireCooldown <= 0 && player.stamina >= 28 && !attacksLockedBeforeBoss) {
+        state.shots.push({
+          x: player.x + player.width / 2 + player.facing * 22,
+          y: player.y + 22,
+          vx: player.facing * 9,
+          age: 0,
+        });
+        player.stamina -= 28;
+        player.fireCooldown = 24;
+        playProjectileSound('fire');
+      }
+
+      player.fireCooldown = Math.max(0, player.fireCooldown - 1);
+      player.punchCooldown = Math.max(0, player.punchCooldown - 1);
+      player.invincible = Math.max(0, player.invincible - 1);
+      player.stamina = clamp(player.stamina + 0.55, 0, 100);
+      player.vy = Math.min(player.vy + 0.78, 15);
+
+      player.x += player.vx;
+      player.x = clamp(player.x, 82, WIDTH - player.width - 82);
+
+      const previousBottom = player.y + player.height;
+      player.grounded = false;
+      player.y += player.vy;
+      adventurePlatforms.forEach((platform) => {
+        if (
+          player.vy >= 0 &&
+          previousBottom <= platform.y + 8 &&
+          rectsOverlap(player, platform)
+        ) {
+          player.y = platform.y - player.height;
+          player.vy = 0;
+          player.grounded = true;
+        }
+      });
+      if (player.y > HEIGHT + 80) damageAdventurePlayer(state);
+
+      const travelerX = TRAVELER_X;
+      const travelerEncounterActive = boss.action === 'spawn' && !state.travelerMet;
+      const travelerDialogueActive = state.travelerDialogueIndex >= 0;
+      if (travelerEncounterActive || travelerDialogueActive) {
+        boss.actionTimer = 96;
+        boss.vx = 0;
+        if (!state.travelerMet && Math.abs(player.x + player.width / 2 - travelerX) < 78) {
+          state.travelerMet = true;
+          state.travelerDialogueIndex = 0;
+          state.message = 'Traveler';
+          player.vx *= 0.25;
+        }
+        state.cameraShake = Math.max(0, state.cameraShake - 0.75);
+        return;
+      }
+
+      if (boss.health > 0 || boss.action === 'death') {
+        const bossCenter = boss.x + boss.width / 2;
+        const playerCenter = player.x + player.width / 2;
+        const distance = Math.abs(playerCenter - bossCenter);
+        boss.facing = playerCenter < bossCenter ? -1 : 1;
+
+        if (boss.actionTimer > 0) {
+          boss.actionTimer -= 1;
+          boss.vx = 0;
+
+          if (boss.action === 'slam' && boss.actionTimer === 28) {
+            const slamBox = {
+              x: boss.x + (boss.facing === -1 ? -78 : boss.width - 10),
+              y: boss.y + 72,
+              width: 88,
+              height: 54,
+            };
+            state.cameraShake = Math.max(state.cameraShake, 22);
+            if (rectsOverlap(player, slamBox)) damageAdventurePlayer(state);
+          }
+
+          if (boss.action === 'whip' && boss.actionTimer === 30) {
+            const whipBox = {
+              x: boss.x + (boss.facing === -1 ? -208 : boss.width - 12),
+              y: boss.y + 44,
+              width: 220,
+              height: 58,
+            };
+            state.cameraShake = Math.max(state.cameraShake, 12);
+            if (rectsOverlap(player, whipBox)) damageAdventurePlayer(state);
+          }
+
+          if (boss.action === 'whip' && boss.actionTimer === 20) {
+            state.shots.push({
+              x: boss.x + boss.width / 2 + boss.facing * 108,
+              y: boss.y + 72,
+              vx: boss.facing * 6.6,
+              age: 0,
+              element: 'vine',
+            });
+          }
+
+          if (boss.action === 'summon' && boss.actionTimer === 46 && state.minions.length === 0) {
+            const portalX = clamp(boss.x + boss.width / 2 + boss.facing * 118, 145, WIDTH - 145);
+            state.minionPortal = { x: portalX, y: 444, timer: 92 };
+            state.minions = [
+              {
+                x: portalX - 42,
+                y: 384,
+                width: 34,
+                height: 58,
+                vx: -1.15,
+                minX: Math.max(100, portalX - 190),
+                maxX: Math.min(WIDTH - 120, portalX + 90),
+                health: 2,
+                facing: -1,
+                action: 'spawn',
+                actionTimer: 58,
+              },
+              {
+                x: portalX + 18,
+                y: 384,
+                width: 34,
+                height: 58,
+                vx: 1.15,
+                minX: Math.max(100, portalX - 90),
+                maxX: Math.min(WIDTH - 120, portalX + 190),
+                health: 2,
+                facing: 1,
+                action: 'spawn',
+                actionTimer: 58,
+              },
+            ];
+            state.message = 'The Guardian summons minions!';
+            state.cameraShake = Math.max(state.cameraShake, 12);
+          }
+
+          if (boss.actionTimer <= 0) {
+            if (boss.action === 'death') {
+              state.won = true;
+              state.message = 'Guardian defeated';
+              return;
+            }
+            boss.action = 'walk';
+            boss.attackCooldown = 48;
+          }
+        } else if (boss.health > 0) {
+          boss.attackCooldown = Math.max(0, boss.attackCooldown - 1);
+          boss.vx = boss.facing * (distance > 148 ? 2.35 : 1.15);
+          boss.x += boss.vx;
+          boss.x = clamp(boss.x, boss.minX, boss.maxX);
+
+          if (boss.health <= boss.maxHealth / 2 && !boss.hasSummoned) {
+            boss.action = 'summon';
+            boss.actionTimer = 76;
+            boss.hasSummoned = true;
+            boss.vx = 0;
+          } else if (boss.attackCooldown <= 0) {
+            boss.action = distance > 128 ? 'whip' : 'slam';
+            boss.actionTimer = boss.action === 'whip' ? 62 : 72;
+            boss.vx = 0;
+          }
+        }
+
+        if (boss.action === 'walk' && rectsOverlap(player, boss)) damageAdventurePlayer(state);
+      }
+
+      state.minionPortal.timer = Math.max(0, state.minionPortal.timer - 1);
+
+      state.minions.forEach((minion) => {
+        if (minion.actionTimer > 0) {
+          minion.actionTimer -= 1;
+          if (minion.actionTimer <= 0) {
+            if (minion.action === 'death') return;
+            minion.action = minion.health <= 0 ? 'death' : 'walk';
+            minion.actionTimer = minion.health <= 0 ? 44 : 0;
+          }
+        }
+
+        if (minion.health > 0 && minion.action !== 'spawn' && minion.action !== 'damage') {
+          const playerCenter = player.x + player.width / 2;
+          const minionCenter = minion.x + minion.width / 2;
+          const chaseDirection: 1 | -1 = playerCenter >= minionCenter ? 1 : -1;
+          minion.vx += chaseDirection * 0.16;
+          minion.vx = clamp(minion.vx, -2.45, 2.45);
+          minion.x += minion.vx;
+          if (minion.x < minion.minX || minion.x > minion.maxX) {
+            minion.x = clamp(minion.x, minion.minX, minion.maxX);
+            minion.vx *= -0.35;
+          }
+          minion.facing = minion.vx < 0 ? -1 : 1;
+          if (rectsOverlap(player, getMinionHitbox(minion))) damageAdventurePlayer(state);
+        }
+      });
+      state.minions = state.minions.filter((minion) => minion.action !== 'death' || minion.actionTimer > 0);
+
+      state.shots = state.shots
+        .map((shot) => ({ ...shot, x: shot.x + shot.vx, age: shot.age + 1 }))
+        .filter((shot) => shot.age < 75 && shot.x > -40 && shot.x < WIDTH + 40);
+
+      state.shots.forEach((shot) => {
+        state.minions.forEach((minion) => {
+          if (
+            minion.health > 0 &&
+            minion.action !== 'spawn' &&
+            shot.element !== 'vine' &&
+            rectsOverlap({ x: shot.x - 12, y: shot.y - 12, width: 24, height: 24 }, getMinionHitbox(minion))
+          ) {
+            minion.health -= 1;
+            shot.age = 999;
+            state.cameraShake = Math.max(state.cameraShake, 6);
+            state.message = 'Minion hit';
+            minion.action = minion.health <= 0 ? 'death' : 'damage';
+            minion.actionTimer = minion.health <= 0 ? 44 : 22;
+          }
+        });
+        if (boss.health > 0 && shot.element !== 'vine' && rectsOverlap({ x: shot.x - 8, y: shot.y - 8, width: 16, height: 16 }, boss)) {
+          boss.health -= 1;
+          shot.age = 999;
+          state.cameraShake = Math.max(state.cameraShake, 10);
+          state.message = `Forest Guardian ${boss.health}/${boss.maxHealth}`;
+          if (boss.health <= 0) {
+            boss.action = 'death';
+            boss.actionTimer = 96;
+            boss.vx = 0;
+            state.message = 'Guardian defeated';
+          } else if (boss.actionTimer <= 0) {
+            boss.action = 'damage';
+            boss.actionTimer = 34;
+            boss.vx = 0;
+          }
+        }
+        if (shot.element === 'vine' && rectsOverlap({ x: shot.x - 14, y: shot.y - 14, width: 28, height: 28 }, player)) {
+          shot.age = 999;
+          damageAdventurePlayer(state);
+        }
+      });
+      state.shots = state.shots.filter((shot) => shot.age < 900);
+      state.cameraShake = Math.max(0, state.cameraShake - 0.75);
+    };
+
+    const getLightFrameCanvas = (
+      sheet: HTMLImageElement | null,
+      frame: SpriteFrame,
+      cacheRef: MutableRefObject<Map<string, HTMLCanvasElement>>,
+      key: string,
+    ) => {
+      const cached = cacheRef.current.get(key);
+      if (cached) return cached;
+      if (!sheet || !frame) return null;
+
+      const frameCanvas = document.createElement('canvas');
+      frameCanvas.width = frame.width;
+      frameCanvas.height = frame.height;
+      const frameContext = frameCanvas.getContext('2d');
+      if (!frameContext) return null;
+
+      frameContext.drawImage(
+        sheet,
+        frame.x,
+        frame.y,
+        frame.width,
+        frame.height,
+        0,
+        0,
+        frame.width,
+        frame.height,
+      );
+
+      try {
+        const pixels = frameContext.getImageData(0, 0, frame.width, frame.height);
+        for (let index = 0; index < pixels.data.length; index += 4) {
+          const r = pixels.data[index];
+          const g = pixels.data[index + 1];
+          const b = pixels.data[index + 2];
+          const lightCheckerBackground = r > 205 && g > 205 && b > 205;
+          if (lightCheckerBackground) pixels.data[index + 3] = 0;
+        }
+        frameContext.putImageData(pixels, 0, 0);
+      } catch {
+        // If pixel access fails, draw the unedited frame.
+      }
+
+      cacheRef.current.set(key, frameCanvas);
+      return frameCanvas;
+    };
+
+    const drawAdventure = (time: number) => {
+      const state = adventureRef.current;
+      const { player, boss } = state;
+      const shakeX = state.cameraShake > 0 ? Math.sin(time * 0.09) * state.cameraShake : 0;
+      const shakeY = state.cameraShake > 0 ? Math.cos(time * 0.11) * state.cameraShake * 0.45 : 0;
+      const arena = forestBossArenaRef.current;
+
+      context.save();
+      context.translate(shakeX, shakeY);
+      if (arena?.complete) {
+        context.drawImage(arena, 0, 8, arena.width, arena.height - 16, 0, 0, WIDTH, HEIGHT);
+      } else {
+        context.fillStyle = '#0b241d';
+        context.fillRect(0, 0, WIDTH, HEIGHT);
+      }
+
+      state.shots.forEach((shot) => {
+        if (shot.element === 'vine') {
+          const glow = context.createRadialGradient(shot.x, shot.y, 1, shot.x, shot.y, 22);
+          glow.addColorStop(0, 'rgba(236, 255, 132, 0.95)');
+          glow.addColorStop(0.42, 'rgba(119, 245, 42, 0.58)');
+          glow.addColorStop(1, 'rgba(35, 115, 12, 0)');
+          context.fillStyle = glow;
+          context.beginPath();
+          context.arc(shot.x, shot.y, 22, 0, Math.PI * 2);
+          context.fill();
+          context.strokeStyle = 'rgba(184, 247, 109, 0.8)';
+          context.lineWidth = 3;
+          context.beginPath();
+          context.moveTo(shot.x - shot.vx * 3.8, shot.y + 3);
+          context.lineTo(shot.x - shot.vx * 1.4, shot.y - 1);
+          context.stroke();
+          context.fillStyle = '#cfff66';
+          context.beginPath();
+          context.arc(shot.x, shot.y, 7, 0, Math.PI * 2);
+          context.fill();
+        } else {
+          context.fillStyle = '#ffb02e';
+          context.beginPath();
+          context.arc(shot.x, shot.y, 9, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = '#fff2a6';
+          context.fillRect(shot.x - 2, shot.y - 4, 7, 7);
+        }
+      });
+
+      if (state.minionPortal.timer > 0) {
+        const pulse = Math.sin(time * 0.02) * 0.12 + 1;
+        context.save();
+        context.globalAlpha = Math.min(1, state.minionPortal.timer / 18);
+        context.translate(state.minionPortal.x, state.minionPortal.y);
+        context.scale(pulse, 1);
+        context.fillStyle = 'rgba(83, 255, 23, 0.22)';
+        context.beginPath();
+        context.ellipse(0, 0, 68, 14, 0, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = '#9aff37';
+        context.lineWidth = 3;
+        context.beginPath();
+        context.ellipse(0, 0, 54, 10, 0, 0, Math.PI * 2);
+        context.stroke();
+        for (let spark = 0; spark < 12; spark += 1) {
+          const angle = spark * 1.7 + time * 0.004;
+          const radius = 18 + ((spark * 9 + state.minionPortal.timer) % 36);
+          context.fillStyle = spark % 2 === 0 ? '#d7ff78' : '#63e629';
+          context.fillRect(Math.cos(angle) * radius, -8 - ((spark * 7 + time / 12) % 34), 3, 3);
+        }
+        context.restore();
+      }
+
+      const guideIntroActive =
+        state.chapter === 1 &&
+        boss.action === 'spawn' &&
+        (!state.travelerMet || state.travelerDialogueIndex >= 0 || boss.actionTimer > 58);
+      if (guideIntroActive) {
+        drawForestGuide(time);
+        if (state.travelerMet && state.travelerDialogueIndex >= 0) drawTravelerDialogue();
+      }
+
+      state.minions.forEach((minion, index) => {
+        const sheet = forestGuardianMinionSheetRef.current;
+        const group: keyof typeof FOREST_GUARDIAN_MINION_SPRITES =
+          minion.actionTimer > 0 ? minion.action : Math.abs(minion.vx) > 0.05 ? 'walk' : 'idle';
+        const frames = FOREST_GUARDIAN_MINION_SPRITES[group];
+        const frameIndex =
+          minion.actionTimer > 0
+            ? clamp(
+                Math.floor(
+                  ((group === 'spawn' ? 58 : group === 'damage' ? 22 : group === 'death' ? 44 : 1) -
+                    minion.actionTimer) /
+                    (group === 'spawn' ? 58 : group === 'damage' ? 22 : group === 'death' ? 44 : 1) *
+                    frames.length,
+                ),
+                0,
+                frames.length - 1,
+              )
+            : Math.floor(time / 105 + index) % frames.length;
+        const frame = frames[frameIndex];
+        const frameCanvas = getLightFrameCanvas(
+          sheet,
+          frame,
+          forestGuardianMinionFrameCacheRef,
+          `new-minion-crop-only-${group}-${frameIndex}`,
+        );
+        if (sheet?.complete) {
+          context.save();
+          context.translate(minion.x + minion.width / 2, minion.y + minion.height);
+          context.scale(minion.facing < 0 ? -1 : 1, 1);
+          if (frameCanvas) {
+            const drawWidth = group === 'spawn' ? 104 : group === 'death' ? 108 : 98;
+            const drawHeight = group === 'death' ? 68 : group === 'spawn' ? 100 : 94;
+            context.drawImage(frameCanvas, -drawWidth / 2, -drawHeight, drawWidth, drawHeight);
+          }
+          context.restore();
+        } else {
+          context.fillStyle = '#7ec641';
+          context.fillRect(minion.x, minion.y, minion.width, minion.height);
+        }
+      });
+
+      if ((boss.health > 0 || boss.action === 'death') && !guideIntroActive) {
+        const group: AdventureBoss['action'] | 'idle' =
+          boss.actionTimer > 0 ? boss.action : Math.abs(boss.vx) > 0.05 ? 'walk' : 'idle';
+        const extraGroup: keyof typeof FOREST_GUARDIAN_EXTRA_SPRITES | null =
+          group === 'spawn' || group === 'damage' || group === 'death' ? group : null;
+        const isWhip = group === 'whip';
+        const mainGroup = group as keyof typeof FOREST_GUARDIAN_SPRITES;
+        const sheet = extraGroup
+          ? forestGuardianExtraSheetRef.current
+          : isWhip
+            ? forestGuardianWhipSheetRef.current
+            : forestGuardianSheetRef.current;
+        const frames = extraGroup
+          ? FOREST_GUARDIAN_EXTRA_SPRITES[extraGroup]
+          : isWhip
+            ? FOREST_GUARDIAN_WHIP_SPRITES
+            : FOREST_GUARDIAN_SPRITES[mainGroup];
+        const animationDuration =
+          group === 'spawn' || group === 'death'
+            ? 96
+            : group === 'damage'
+              ? 34
+              : group === 'whip'
+                ? 62
+                : group === 'summon'
+                  ? 76
+                  : 72;
+        const frameIndex =
+          boss.actionTimer > 0
+            ? clamp(
+                Math.floor(
+                  ((animationDuration - boss.actionTimer) / animationDuration) *
+                    frames.length,
+                ),
+                0,
+                frames.length - 1,
+              )
+            : Math.floor(time / (group === 'walk' ? 125 : 160)) % frames.length;
+        const frame = frames[frameIndex];
+        const frameCanvas = getLightFrameCanvas(
+          sheet,
+          frame,
+          forestGuardianFrameCacheRef,
+          `boss-crop-only-${extraGroup ?? (isWhip ? 'whip' : 'main')}-${group}-${frameIndex}`,
+        );
+        if (sheet?.complete) {
+          context.save();
+          context.translate(boss.x + boss.width / 2, boss.y + boss.height);
+          context.scale(boss.facing < 0 ? -1 : 1, 1);
+          const drawWidth =
+            group === 'whip'
+              ? 260
+              : group === 'slam'
+              ? 190
+              : group === 'summon' || group === 'spawn' || group === 'damage' || group === 'death'
+                ? 196
+                : group === 'walk'
+                  ? 178
+                  : 176;
+          const drawHeight =
+            group === 'whip'
+              ? 174
+              : group === 'slam'
+              ? 186
+              : group === 'summon' || group === 'spawn' || group === 'damage' || group === 'death'
+                ? 174
+                : group === 'walk'
+                  ? 170
+                  : 164;
+          if (frameCanvas) {
+            context.drawImage(frameCanvas, -drawWidth / 2, -drawHeight, drawWidth, drawHeight);
+          }
+          context.restore();
+        } else {
+          context.fillStyle = '#263b25';
+          context.beginPath();
+          context.ellipse(boss.x + 45, boss.y + 56, 46, 58, 0, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+
+      const kazanGroup: keyof typeof KAZAN_SPRITES =
+        player.fireCooldown > 13
+          ? 'shoot'
+          : player.punchCooldown > 10
+            ? 'jab'
+            : player.grounded && Math.abs(player.vx) > 0.45
+              ? 'walk'
+              : 'idle';
+      const kazanFrames = KAZAN_SPRITES[kazanGroup];
+      const kazanFrameIndex =
+        kazanGroup === 'shoot'
+          ? getShootFrameIndex(player.fireCooldown, kazanFrames.length)
+          : kazanGroup === 'jab'
+            ? clamp(Math.floor(((22 - player.punchCooldown) / 22) * kazanFrames.length), 0, kazanFrames.length - 1)
+          : Math.floor(time / (kazanGroup === 'walk' ? 105 : 180)) % kazanFrames.length;
+      const kazanFrameCanvas = getKazanFrameCanvas(kazanGroup, kazanFrameIndex);
+      context.save();
+      context.translate(player.x + player.width / 2, player.y + player.height + 4);
+      context.scale(player.facing, 1);
+      context.globalAlpha = player.invincible > 0 && Math.floor(time / 80) % 2 === 0 ? 0.45 : 1;
+      if (kazanFrameCanvas) {
+        const kazanScale = kazanGroup === 'shoot' ? 0.48 : 0.52;
+        const drawWidth = kazanFrameCanvas.width * kazanScale;
+        const drawHeight = kazanFrameCanvas.height * kazanScale;
+        context.drawImage(kazanFrameCanvas, -drawWidth / 2, -drawHeight, drawWidth, drawHeight);
+      } else {
+        context.fillStyle = '#25315c';
+        context.fillRect(-16, -52, 32, 52);
+      }
+      context.globalAlpha = 1;
+      context.restore();
+      context.restore();
+
+      context.fillStyle = 'rgba(6, 12, 8, 0.72)';
+      context.fillRect(14, 14, 250, 98);
+      context.fillStyle = '#fff1c7';
+      context.font = '900 18px monospace';
+      context.textAlign = 'left';
+      context.fillText(`HP ${Math.max(0, player.health)}`, 28, 38);
+      context.fillStyle = '#101216';
+      context.fillRect(28, 50, 198, 14);
+      context.strokeStyle = '#fff1c7';
+      context.lineWidth = 2;
+      context.strokeRect(28, 50, 198, 14);
+      context.fillStyle = player.stamina >= 28 ? '#ffe45e' : '#785f3b';
+      context.fillRect(32, 54, Math.max(0, 190 * (player.stamina / 100)), 6);
+      context.fillStyle = '#fff1c7';
+      context.font = '900 12px monospace';
+      context.fillText('STAMINA', 28, 82);
+      context.fillText('F PUNCH  G FIREBALL', 116, 82);
+      context.fillText(`${state.crystals}/5 CRYSTALS`, 28, 102);
+
+      context.fillStyle = '#101216';
+      context.fillRect(WIDTH - 286, 20, 250, 18);
+      context.strokeStyle = '#fff1c7';
+      context.lineWidth = 2;
+      context.strokeRect(WIDTH - 286, 20, 250, 18);
+      context.fillStyle = '#ff4f78';
+      context.fillRect(WIDTH - 281, 25, Math.max(0, 240 * (boss.health / boss.maxHealth)), 8);
+      context.fillStyle = '#fff1c7';
+      context.font = '900 13px monospace';
+      context.textAlign = 'right';
+      context.fillText(state.bossName, WIDTH - 36, 17);
+
+      context.fillStyle = '#fff1c7';
+      context.textAlign = 'center';
+      context.fillText(state.message, WIDTH / 2, 34);
+
+      if (state.won) {
+        drawPostBossSequence(time);
+      }
+    };
 
     const updateFighter = (
       fighter: Fighter,
@@ -1118,6 +2230,226 @@ function App() {
       }
       kazanFrameCacheRef.current.set(key, frameCanvas);
       return frameCanvas;
+    };
+
+    const getForestGuideFrameCanvas = (index: number) => {
+      const key = `idle-${index}`;
+      const cached = forestGuideFrameCacheRef.current.get(key);
+      if (cached) return cached;
+
+      const sheet = forestGuideSheetRef.current;
+      const frame = FOREST_GUIDE_IDLE_SPRITES[index];
+      if (!sheet || !frame) return null;
+
+      const frameCanvas = document.createElement('canvas');
+      frameCanvas.width = frame.width;
+      frameCanvas.height = frame.height;
+      const frameContext = frameCanvas.getContext('2d');
+      if (!frameContext) return null;
+
+      frameContext.drawImage(
+        sheet,
+        frame.x,
+        frame.y,
+        frame.width,
+        frame.height,
+        0,
+        0,
+        frame.width,
+        frame.height,
+      );
+
+      try {
+        const pixels = frameContext.getImageData(0, 0, frame.width, frame.height);
+        for (let i = 0; i < pixels.data.length; i += 4) {
+          const r = pixels.data[i];
+          const g = pixels.data[i + 1];
+          const b = pixels.data[i + 2];
+          const greyBackground = Math.abs(r - g) < 12 && Math.abs(g - b) < 12 && r > 70 && r < 190;
+          if (greyBackground) pixels.data[i + 3] = 0;
+        }
+        frameContext.putImageData(pixels, 0, 0);
+      } catch {
+        // Keep the guide visible even if pixel cleanup is blocked.
+      }
+
+      forestGuideFrameCacheRef.current.set(key, frameCanvas);
+      return frameCanvas;
+    };
+
+    const drawForestGuide = (time: number) => {
+      const frameIndex = Math.floor(time / 180) % FOREST_GUIDE_IDLE_SPRITES.length;
+      const frameCanvas = getForestGuideFrameCanvas(frameIndex);
+      if (!frameCanvas) return;
+
+      const bob = Math.sin(time * 0.005) * 1.5;
+      const drawWidth = frameCanvas.width * 0.62;
+      const drawHeight = frameCanvas.height * 0.62;
+      context.save();
+      context.translate(TRAVELER_X, 446 + bob);
+      context.fillStyle = 'rgba(4, 10, 9, 0.42)';
+      context.beginPath();
+      context.ellipse(0, 0, 34, 7, 0, 0, Math.PI * 2);
+      context.fill();
+      context.drawImage(frameCanvas, -drawWidth / 2, -drawHeight, drawWidth, drawHeight);
+      context.restore();
+    };
+
+    const drawTravelerDialogue = () => {
+      const lines = TEXT[languageRef.current].travelerCrystalRumor;
+      const lineIndex = clamp(adventureRef.current.travelerDialogueIndex, 0, lines.length - 1);
+      const copy = lines[lineIndex];
+      const longBubble = lineIndex === 2 || lineIndex === 4;
+      const boxX = longBubble ? 402 : 492;
+      const boxY = longBubble ? 270 : 294;
+      const boxWidth = longBubble ? 460 : 330;
+      const boxHeight = longBubble ? 86 : 54;
+      context.save();
+      context.fillStyle = '#fffdf0';
+      context.strokeStyle = '#151515';
+      context.lineWidth = 4;
+      context.beginPath();
+      context.roundRect(boxX, boxY, boxWidth, boxHeight, 10);
+      context.fill();
+      context.stroke();
+      context.beginPath();
+      context.moveTo(boxX + boxWidth - 102, boxY + boxHeight - 2);
+      context.lineTo(TRAVELER_X - 12, boxY + boxHeight + 25);
+      context.lineTo(boxX + boxWidth - 62, boxY + boxHeight - 2);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillStyle = '#111111';
+      context.font = '15px "Geist Pixel", "Press Start 2P", monospace';
+      context.textAlign = 'left';
+      context.textBaseline = 'top';
+      const words = copy.split(' ');
+      const wrapped: string[] = [];
+      let line = '';
+      words.forEach((word) => {
+        const next = line ? `${line} ${word}` : word;
+        if (context.measureText(next).width > boxWidth - 44 && line) {
+          wrapped.push(line);
+          line = word;
+        } else {
+          line = next;
+        }
+      });
+      if (line) wrapped.push(line);
+      wrapped.slice(0, 3).forEach((text, index) => {
+        context.fillText(text, boxX + 22, boxY + 14 + index * 20);
+      });
+      context.restore();
+    };
+
+    const drawPostBossSequence = (time: number) => {
+      const state = adventureRef.current;
+      const timer = state.postBossTimer;
+      const crystalX = 618;
+      const crystalY = 336 + Math.sin(time * 0.006) * 5;
+      context.save();
+
+      if (timer > 18) {
+        const glow = context.createRadialGradient(crystalX, crystalY, 4, crystalX, crystalY, 64);
+        glow.addColorStop(0, 'rgba(133, 238, 255, 0.95)');
+        glow.addColorStop(0.35, 'rgba(62, 173, 255, 0.42)');
+        glow.addColorStop(1, 'rgba(43, 84, 255, 0)');
+        context.fillStyle = glow;
+        context.beginPath();
+        context.arc(crystalX, crystalY, 64, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = '#8eefff';
+        context.strokeStyle = '#ffffff';
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(crystalX, crystalY - 34);
+        context.lineTo(crystalX + 22, crystalY - 7);
+        context.lineTo(crystalX + 10, crystalY + 32);
+        context.lineTo(crystalX - 14, crystalY + 32);
+        context.lineTo(crystalX - 24, crystalY - 7);
+        context.closePath();
+        context.fill();
+        context.stroke();
+      }
+
+      if (timer > 92 && timer < 210) {
+        drawForestGuide(time);
+        const boxX = 374;
+        const boxY = 278;
+        const boxWidth = 430;
+        const boxHeight = 66;
+        context.fillStyle = '#fffdf0';
+        context.strokeStyle = '#151515';
+        context.lineWidth = 4;
+        context.beginPath();
+        context.roundRect(boxX, boxY, boxWidth, boxHeight, 10);
+        context.fill();
+        context.stroke();
+        context.fillStyle = '#111111';
+        context.font = '15px "Geist Pixel", "Press Start 2P", monospace';
+        context.textAlign = 'left';
+        context.textBaseline = 'top';
+        context.fillText(TEXT[languageRef.current].travelerAfterBoss, boxX + 20, boxY + 20);
+      }
+
+      if (timer > 130) {
+        context.fillStyle = '#fff1c7';
+        context.font = '20px "Geist Pixel", "Press Start 2P", monospace';
+        context.textAlign = 'center';
+        context.fillText(TEXT[languageRef.current].crystalCollected, WIDTH / 2, 88);
+      }
+
+      if (timer > 230) {
+        const portalX = 810;
+        const portalY = 374;
+        const pulse = 1 + Math.sin(time * 0.01) * 0.08;
+        context.save();
+        context.translate(portalX, portalY);
+        context.scale(pulse, 1);
+        context.fillStyle = 'rgba(93, 211, 255, 0.22)';
+        context.strokeStyle = '#7af0ff';
+        context.lineWidth = 6;
+        context.beginPath();
+        context.ellipse(0, 0, 46, 82, 0, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
+        context.strokeStyle = '#ffffff';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.ellipse(0, 0, 28, 58, 0, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+
+      if (timer > 330) {
+        context.fillStyle = 'rgba(0, 0, 0, 0.54)';
+        context.fillRect(0, 0, WIDTH, HEIGHT);
+        context.fillStyle = '#fff1c7';
+        context.font = '20px "Geist Pixel", "Press Start 2P", monospace';
+        context.textAlign = 'center';
+        context.fillText(TEXT[languageRef.current].nextBossPreview, WIDTH / 2, 92);
+        context.save();
+        context.translate(WIDTH / 2, 334);
+        context.fillStyle = 'rgba(4, 7, 12, 0.92)';
+        context.beginPath();
+        context.ellipse(0, -22, 54, 88, 0, 0, Math.PI * 2);
+        context.fill();
+        context.fillRect(-46, -94, 92, 130);
+        context.fillStyle = '#63f034';
+        context.fillRect(-18, -72, 10, 10);
+        context.fillRect(8, -72, 10, 10);
+        context.strokeStyle = '#63f034';
+        context.lineWidth = 4;
+        context.beginPath();
+        context.moveTo(-62, -10);
+        context.quadraticCurveTo(-112, 26, -82, 84);
+        context.moveTo(62, -10);
+        context.quadraticCurveTo(112, 26, 82, 84);
+        context.stroke();
+        context.restore();
+      }
+
+      context.restore();
     };
 
     const drawKazanSprite = (fighter: Fighter, label: string) => {
@@ -2418,6 +3750,15 @@ function App() {
     };
 
     const loop = (time: number) => {
+      if (screenRef.current === 'adventure-level') {
+        updateAdventure();
+        context.clearRect(0, 0, WIDTH, HEIGHT);
+        context.imageSmoothingEnabled = false;
+        drawAdventure(time);
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       update();
       draw(time);
 
@@ -2443,6 +3784,10 @@ function App() {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('pointerdown', onDialogueInput, true);
+      window.removeEventListener('mousedown', onDialogueInput, true);
+      window.removeEventListener('click', onDialogueInput, true);
+      window.removeEventListener('touchstart', onDialogueInput, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [view]);
@@ -2455,6 +3800,17 @@ function App() {
     keysRef.current.delete(code);
   };
 
+  const pressTouch = (code: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    press(code);
+  };
+
+  const releaseTouch = (code: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    release(code);
+  };
+
   const restart = () => {
     const p1Wins = gameRef.current.p1.wins;
     const p2Wins = gameRef.current.p2.wins;
@@ -2465,16 +3821,20 @@ function App() {
   };
 
   const fullReset = () => {
+    localStorage.removeItem(ADVENTURE_PROGRESS_STORAGE_KEY);
     gameRef.current = createGame();
+    adventureRef.current = createAdventureState();
     const stageName = getStageName(stage);
     const modeLabel = playerMode === '1p' ? t.playerVsCpu : t.playerVsPlayer;
     gameRef.current.message = `${modeLabel} - ${stageName}`;
+    setAdventureVideoIndex(0);
     pausedRef.current = false;
     keysRef.current.clear();
     setPaused(false);
   };
 
   const openMenu = () => {
+    stopAdventureNarration();
     keysRef.current.clear();
     pausedRef.current = false;
     screenRef.current = 'main-menu';
@@ -2482,7 +3842,72 @@ function App() {
     setPaused(false);
   };
 
+  const readAdventureProgress = (): AdventureProgress => {
+    try {
+      const saved = localStorage.getItem(ADVENTURE_PROGRESS_STORAGE_KEY);
+      if (!saved) return DEFAULT_ADVENTURE_PROGRESS;
+      return { ...DEFAULT_ADVENTURE_PROGRESS, ...JSON.parse(saved) } as AdventureProgress;
+    } catch {
+      return DEFAULT_ADVENTURE_PROGRESS;
+    }
+  };
+
+  const saveAdventureProgress = (progress: Partial<AdventureProgress>) => {
+    const next = { ...readAdventureProgress(), ...progress };
+    localStorage.setItem(ADVENTURE_PROGRESS_STORAGE_KEY, JSON.stringify(next));
+    return next;
+  };
+
+  const openAdventureSplash = () => {
+    stopAdventureNarration();
+    saveAdventureProgress({ introComplete: true, phase: 'splash' });
+    keysRef.current.clear();
+    pausedRef.current = false;
+    screenRef.current = 'adventure-splash';
+    setScreen('adventure-splash');
+    setPaused(false);
+  };
+
+  const startAdventureVideo = () => {
+    const progress = readAdventureProgress();
+    keysRef.current.clear();
+    pausedRef.current = false;
+    screenRef.current = 'adventure-video';
+    setAdventureVideoIndex(progress.introComplete ? 0 : progress.introIndex);
+    saveAdventureProgress({ phase: 'intro' });
+    setScreen('adventure-video');
+    setPaused(false);
+  };
+
+  const startAdventureJourneyVideo = () => {
+    keysRef.current.clear();
+    pausedRef.current = false;
+    screenRef.current = 'adventure-start-video';
+    saveAdventureProgress({ introComplete: true, phase: 'journey-video' });
+    setScreen('adventure-start-video');
+    setPaused(false);
+  };
+
+  const finishAdventureJourneyVideo = () => {
+    saveAdventureProgress({ introComplete: true, journeyVideoComplete: true, phase: 'boss' });
+    startAdventureLevel();
+  };
+
+  const continueAdventure = () => {
+    const progress = readAdventureProgress();
+    if (progress.phase === 'boss' || progress.journeyVideoComplete) {
+      startAdventureLevel();
+      return;
+    }
+    if (progress.introComplete) {
+      openAdventureSplash();
+      return;
+    }
+    startAdventureVideo();
+  };
+
   const signOutToRegistration = () => {
+    stopAdventureNarration();
     void supabase.auth.signOut();
     keysRef.current.clear();
     pausedRef.current = false;
@@ -2496,16 +3921,36 @@ function App() {
     return <Auth language={language} onAuthenticated={enterGame} onContinueGuest={() => enterGame()} />;
   }
 
+  const adventureVideos = [
+    {
+      src: '/stages/adventure-mode.mp4',
+      caption: t.adventureIntro,
+    },
+    {
+      src: '/stages/adventure-dark-figure.mp4',
+      caption: t.adventureIntroDark,
+    },
+    {
+      src: '/stages/adventure-chaos.mp4',
+      caption: t.adventureIntroChaos,
+    },
+    {
+      src: '/stages/adventure-hero.mp4',
+      caption: t.adventureIntroHero,
+    },
+  ];
+  const currentAdventureVideo = adventureVideos[adventureVideoIndex] ?? adventureVideos[0];
+
   return (
     <main className="game-shell">
-      <section className={`arena-wrap ${screen !== 'playing' ? 'arena-wrap--menu' : ''}`}>
+      <section className={`arena-wrap ${screen !== 'playing' && screen !== 'adventure-level' ? 'arena-wrap--menu' : ''}`}>
         <canvas
           ref={canvasRef}
           width={WIDTH}
           height={HEIGHT}
           aria-label={paused ? t.arenaPaused : t.arena}
         />
-        {screen !== 'playing' && (
+        {screen !== 'playing' && screen !== 'adventure-level' && (
           <div className={`start-menu start-menu--${screen}`} role="dialog" aria-label={t.startMenu}>
             <p className="start-menu__eyebrow">
               {screen === 'main-menu'
@@ -2525,6 +3970,11 @@ function App() {
                 </button>
               </div>
             ) : null}
+            {screen === 'main-menu' && (
+              <button type="button" className="start-menu__adventure" onClick={continueAdventure}>
+                {t.adventureMode}
+              </button>
+            )}
             {screen === 'main-menu' && (
               <button type="button" className="start-menu__bottom-play" onClick={() => startGame(playerModeRef.current, stageRef.current)}>
                 {t.play}
@@ -2556,7 +4006,82 @@ function App() {
                 <span className="menu-copy menu-copy--bottom-play">{t.play}</span>
               </div>
             )}
-            <div className="world-carousel" aria-label={t.selectWorld}>
+            {screen === 'adventure-splash' && (
+              <div className="adventure-splash-panel" aria-label={t.adventureMode}>
+                <img src="/stages/adventure-splash.png" alt={t.adventureMode} />
+                <button
+                  type="button"
+                  className="adventure-splash-panel__start"
+                  onClick={() => {
+                    if (readAdventureProgress().journeyVideoComplete) {
+                      startAdventureLevel();
+                      return;
+                    }
+                    startAdventureJourneyVideo();
+                  }}
+                >
+                  {t.play}
+                </button>
+                <button type="button" className="adventure-video-panel__back" onClick={openMenu}>
+                  {t.back}
+                </button>
+              </div>
+            )}
+            {screen === 'adventure-video' && (
+              <div className="adventure-video-panel" aria-label={t.adventureMode}>
+                <video
+                  key={currentAdventureVideo.src}
+                  ref={adventureVideoRef}
+                  className="adventure-video-panel__video"
+                  src={currentAdventureVideo.src}
+                  autoPlay
+                  controls
+                  playsInline
+                  onPlay={() => playAdventureNarrationSegment(adventureVideoIndex)}
+                  onEnded={() => {
+                    pauseAdventureNarration();
+                    if (adventureVideoIndex >= adventureVideos.length - 1) {
+                      openAdventureSplash();
+                      return;
+                    }
+                    setAdventureVideoIndex((index) => {
+                      const next = index + 1;
+                      saveAdventureProgress({ introIndex: next, phase: 'intro' });
+                      return next;
+                    });
+                  }}
+                />
+                <p className="adventure-video-panel__caption">{currentAdventureVideo.caption}</p>
+                <button type="button" className="adventure-video-panel__back" onClick={openMenu}>
+                  {t.back}
+                </button>
+                <button type="button" className="adventure-video-panel__skip" onClick={openAdventureSplash}>
+                  {t.skip}
+                </button>
+              </div>
+            )}
+            {screen === 'adventure-start-video' && (
+              <div className="adventure-video-panel" aria-label={t.adventureJourney}>
+                <video
+                  ref={adventureVideoRef}
+                  className="adventure-video-panel__video"
+                  src="/stages/adventure-start-journey.mp4"
+                  autoPlay
+                  controls
+                  playsInline
+                  onEnded={finishAdventureJourneyVideo}
+                />
+                <p className="adventure-video-panel__caption">{t.adventureJourney}</p>
+                <button type="button" className="adventure-video-panel__back" onClick={openMenu}>
+                  {t.back}
+                </button>
+                <button type="button" className="adventure-video-panel__skip" onClick={finishAdventureJourneyVideo}>
+                  {t.skip}
+                </button>
+              </div>
+            )}
+            {screen !== 'adventure-splash' && screen !== 'adventure-video' && screen !== 'adventure-start-video' && (
+              <div className="world-carousel" aria-label={t.selectWorld}>
                 <button type="button" className="world-carousel__arrow world-carousel__arrow--left" onClick={() => cycleStage(-1)}>
                   {t.previousWorld}
                 </button>
@@ -2567,8 +4092,10 @@ function App() {
                   {t.nextWorld}
                 </button>
               </div>
+            )}
 
-            <div className={`settings-panel settings-panel--${playerMode}`} aria-label={t.settings}>
+            {screen !== 'adventure-splash' && screen !== 'adventure-video' && screen !== 'adventure-start-video' && (
+              <div className={`settings-panel settings-panel--${playerMode}`} aria-label={t.settings}>
                 <button type="button" className="settings-panel__hotspot settings-panel__hotspot--one" onClick={() => chooseMode('1p')}>
                   {playerMode === '1p' ? t.on : t.off}
                 </button>
@@ -2596,6 +4123,7 @@ function App() {
                   {t.back}
                 </button>
               </div>
+            )}
 
             <p className="start-menu__hint">
               {screen === 'main-menu' ? t.pressStart : t.pressStage}
@@ -2616,7 +4144,7 @@ function App() {
             )}
           </div>
         )}
-        {screen === 'playing' && (
+        {(screen === 'playing' || screen === 'adventure-level') && (
           <button type="button" className="tutorial-sign" onClick={() => setShowTutorial(true)}>
             {t.tutorial}
           </button>
@@ -2639,10 +4167,11 @@ function App() {
               <button
                 key={code}
                 type="button"
-                onPointerDown={() => press(code)}
-                onPointerUp={() => release(code)}
-                onPointerLeave={() => release(code)}
-                onPointerCancel={() => release(code)}
+                className={`touch-button touch-button--${code}`}
+                onPointerDown={pressTouch(code)}
+                onPointerUp={releaseTouch(code)}
+                onPointerLeave={releaseTouch(code)}
+                onPointerCancel={releaseTouch(code)}
               >
                 {label}
               </button>
@@ -2674,10 +4203,11 @@ function App() {
                 <button
                   key={code}
                   type="button"
-                  onPointerDown={() => press(code)}
-                  onPointerUp={() => release(code)}
-                  onPointerLeave={() => release(code)}
-                  onPointerCancel={() => release(code)}
+                  className={`touch-button touch-button--${code}`}
+                  onPointerDown={pressTouch(code)}
+                  onPointerUp={releaseTouch(code)}
+                  onPointerLeave={releaseTouch(code)}
+                  onPointerCancel={releaseTouch(code)}
                 >
                   {label}
                 </button>
@@ -2694,25 +4224,46 @@ function App() {
         <section className="tutorial-modal" role="dialog" aria-modal="true" aria-label={t.tutorial}>
           <div className="tutorial-card">
             <h2>{t.tutorial}</h2>
-            <p>{t.tutorialIntro}</p>
-            <div className="tutorial-grid">
-              <div>
-                <h3>{t.player1}</h3>
-                <p>{t.tutorialP1}</p>
+            <p>{screen === 'adventure-level' ? t.adventureTutorialIntro : t.tutorialIntro}</p>
+            {screen === 'adventure-level' ? (
+              <div className="tutorial-grid">
+                <div>
+                  <h3>{t.controls}</h3>
+                  <p>{t.adventureTutorialMove}</p>
+                </div>
+                <div>
+                  <h3>{t.fire}</h3>
+                  <p>{t.adventureTutorialAttack}</p>
+                </div>
+                <div>
+                  <h3>Stamina</h3>
+                  <p>{t.adventureTutorialStamina}</p>
+                </div>
+                <div>
+                  <h3>{t.pause}</h3>
+                  <p>{t.tutorialPause}</p>
+                </div>
               </div>
-              <div>
-                <h3>{t.player2}</h3>
-                <p>{t.tutorialP2}</p>
+            ) : (
+              <div className="tutorial-grid">
+                <div>
+                  <h3>{t.player1}</h3>
+                  <p>{t.tutorialP1}</p>
+                </div>
+                <div>
+                  <h3>{t.player2}</h3>
+                  <p>{t.tutorialP2}</p>
+                </div>
+                <div>
+                  <h3>{t.pause}</h3>
+                  <p>{t.tutorialPause}</p>
+                </div>
+                <div>
+                  <h3>{t.mobile}</h3>
+                  <p>{t.tutorialMobile}</p>
+                </div>
               </div>
-              <div>
-                <h3>{t.pause}</h3>
-                <p>{t.tutorialPause}</p>
-              </div>
-              <div>
-                <h3>{t.mobile}</h3>
-                <p>{t.tutorialMobile}</p>
-              </div>
-            </div>
+            )}
             <button type="button" onClick={closeTutorial}>
               {t.gotIt}
             </button>
