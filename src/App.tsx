@@ -1690,6 +1690,7 @@ function App() {
         state.chapter === 1 &&
         boss.action === 'spawn' &&
         (!state.travelerMet || state.travelerDialogueIndex >= 0 || boss.actionTimer > 58);
+      const bossVisible = (boss.health > 0 || boss.action === 'death') && !guideIntroActive;
       if (guideIntroActive) {
         drawForestGuide(time);
         if (state.travelerMet && state.travelerDialogueIndex >= 0) drawTravelerDialogue();
@@ -1736,7 +1737,7 @@ function App() {
         }
       });
 
-      if ((boss.health > 0 || boss.action === 'death') && !guideIntroActive) {
+      if (bossVisible) {
         const group: AdventureBoss['action'] | 'idle' =
           boss.actionTimer > 0 ? boss.action : Math.abs(boss.vx) > 0.05 ? 'walk' : 'idle';
         const extraGroup: keyof typeof FOREST_GUARDIAN_EXTRA_SPRITES | null =
@@ -1869,21 +1870,25 @@ function App() {
       context.fillText('F PUNCH  G FIREBALL', 116, 82);
       context.fillText(`${state.crystals}/5 CRYSTALS`, 28, 102);
 
-      context.fillStyle = '#101216';
-      context.fillRect(WIDTH - 286, 20, 250, 18);
-      context.strokeStyle = '#fff1c7';
-      context.lineWidth = 2;
-      context.strokeRect(WIDTH - 286, 20, 250, 18);
-      context.fillStyle = '#ff4f78';
-      context.fillRect(WIDTH - 281, 25, Math.max(0, 240 * (boss.health / boss.maxHealth)), 8);
-      context.fillStyle = '#fff1c7';
-      context.font = '900 13px monospace';
-      context.textAlign = 'right';
-      context.fillText(state.bossName, WIDTH - 36, 17);
+      if (bossVisible && !state.won) {
+        context.fillStyle = '#101216';
+        context.fillRect(WIDTH - 286, 20, 250, 18);
+        context.strokeStyle = '#fff1c7';
+        context.lineWidth = 2;
+        context.strokeRect(WIDTH - 286, 20, 250, 18);
+        context.fillStyle = '#ff4f78';
+        context.fillRect(WIDTH - 281, 25, Math.max(0, 240 * (boss.health / boss.maxHealth)), 8);
+        context.fillStyle = '#fff1c7';
+        context.font = '900 13px monospace';
+        context.textAlign = 'right';
+        context.fillText(state.bossName, WIDTH - 36, 17);
+      }
 
-      context.fillStyle = '#fff1c7';
-      context.textAlign = 'center';
-      context.fillText(state.message, WIDTH / 2, 34);
+      if (bossVisible || state.won) {
+        context.fillStyle = '#fff1c7';
+        context.textAlign = 'center';
+        context.fillText(state.message, WIDTH / 2, 34);
+      }
 
       if (state.won) {
         drawPostBossSequence(time);
