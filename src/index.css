@@ -17,11 +17,14 @@
 html,
 body,
 #root {
+  width: 100%;
+  height: 100%;
   min-height: 100%;
 }
 
 body {
   margin: 0;
+  overflow: hidden;
   background:
     linear-gradient(90deg, rgba(255, 228, 94, 0.08) 1px, transparent 1px),
     linear-gradient(rgba(255, 228, 94, 0.06) 1px, transparent 1px),
@@ -235,9 +238,12 @@ button:active {
 }
 
 .game-shell {
-  width: min(1180px, 100%);
-  margin: 0 auto;
-  padding: 22px;
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 .marquee {
@@ -423,8 +429,26 @@ button:active {
 }
 
 .arena-wrap--menu {
+  width: 100vw;
+  height: 100vh;
   border: 0;
   background: #020611;
+  box-shadow: none;
+}
+
+.arena-wrap--adventure-level {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  background: #080b10;
+  box-shadow: none;
+}
+
+.arena-wrap--playing {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  background: #080b10;
   box-shadow: none;
 }
 
@@ -454,7 +478,7 @@ button:active {
   justify-items: center;
   gap: 14px;
   padding: 24px;
-  background: url("/stages/main-menu-clean.png") center / contain no-repeat #020611;
+  background: url("/stages/main-menu-clean.png") center 12.3% / cover no-repeat #020611;
   text-align: center;
 }
 
@@ -473,7 +497,7 @@ button:active {
 .menu-sign-out-copy {
   position: absolute;
   left: 43.35%;
-  top: 39.75%;
+  top: 44.15%;
   z-index: 5;
   display: grid;
   place-items: center start;
@@ -547,30 +571,38 @@ button:active {
 }
 
 .menu-copy--center-play {
-  top: 21.35%;
+  top: 24.65%;
   color: #ffb31a;
 }
 
 .menu-copy--center-adventure {
   left: 43.35%;
-  top: 28%;
+  top: 31.9%;
   width: 15.2%;
   height: 4.3%;
   font-size: clamp(13px, 1.8vw, 28px);
 }
 
+.menu-copy--ru-play {
+  top: 23.55%;
+}
+
+.menu-copy--ru-adventure {
+  top: 30.65%;
+}
+
 .menu-copy--center-settings {
-  top: 33.5%;
+  top: 36.8%;
 }
 
 .menu-copy--center-sign-out {
-  top: 39.75%;
+  top: 41.35%;
   color: #ff3434;
 }
 
 .menu-copy--world-title,
 .menu-copy--settings-title {
-  top: 57.1%;
+  top: 64.05%;
   height: 3.6%;
   color: #fff1c7;
   font-size: clamp(12px, 1.55vw, 25px);
@@ -596,51 +628,41 @@ button:active {
   justify-items: start;
   width: 12.1%;
   height: 3.1%;
-  font-size: clamp(10px, 1.25vw, 20px);
+  font-size: clamp(12px, 1.48vw, 24px);
 }
 
 .menu-copy--one-player {
-  top: 62.35%;
+  top: 70.75%;
   width: 10.2%;
 }
 
 .menu-copy--two-players {
   left: 52.05%;
-  top: 66.85%;
+  top: 75.65%;
   width: 10.8%;
 }
 
 .menu-copy--sound {
-  top: 71.7%;
+  top: 80.65%;
   width: 8%;
 }
 
 .menu-copy--language {
   left: 52.05%;
-  top: 75.45%;
+  top: 85.55%;
   width: 9.5%;
 }
 
 .menu-copy--reset {
-  top: 80.45%;
+  top: 90.75%;
   width: 15.3%;
   color: #ff3434;
 }
 
 .menu-copy--back {
   left: 52.05%;
-  top: 84.45%;
+  top: 95.85%;
   width: 8.5%;
-}
-
-.menu-copy--bottom-play {
-  left: 44.8%;
-  top: 91.55%;
-  width: 8.3%;
-  height: 3.8%;
-  color: #fff1c7;
-  background: transparent;
-  font-size: clamp(18px, 2.5vw, 40px);
 }
 
 .start-menu__eyebrow,
@@ -723,7 +745,7 @@ button:active {
 
 .start-menu--main-menu .start-menu__options--play {
   position: absolute;
-  top: 17.8%;
+  top: 21.1%;
   left: 43%;
   width: 17%;
   height: 10%;
@@ -762,7 +784,7 @@ button:active {
 .start-menu__adventure {
   position: absolute;
   left: 42.7%;
-  top: 26.4%;
+  top: 30.3%;
   z-index: 2;
   width: 17.3%;
   height: 6.4%;
@@ -787,32 +809,10 @@ button:active {
   outline-offset: 4px;
 }
 
-.start-menu__bottom-play {
-  position: absolute;
-  left: 38.6%;
-  top: 90%;
-  width: 20.8%;
-  height: 8%;
-  min-height: 0;
-  border: 0;
-  padding: 0;
-  overflow: hidden;
-  color: transparent;
-  background: transparent;
-  box-shadow: none;
-  text-shadow: none;
-}
-
-.start-menu__bottom-play:hover,
-.start-menu__bottom-play:active {
-  filter: none;
-  transform: none;
-}
-
 .start-menu__sign-out {
   position: absolute;
   left: 42.2%;
-  top: 39.3%;
+  top: 40.9%;
   z-index: 2;
   width: 13%;
   height: 4.6%;
@@ -878,10 +878,10 @@ button:active {
 .adventure-splash-panel__start {
   position: absolute;
   left: 34%;
-  top: 80%;
+  top: 83%;
   z-index: 3;
   width: 32%;
-  height: 12%;
+  height: 10%;
   min-height: 0;
   border: 0;
   padding: 0;
@@ -989,7 +989,7 @@ button:active {
 .world-carousel {
   position: absolute;
   left: 15.9%;
-  top: 55.7%;
+  top: 65.8%;
   width: 32.6%;
   height: 32.7%;
 }
@@ -1082,7 +1082,7 @@ button:active {
 .settings-panel {
   position: absolute;
   left: 50%;
-  top: 55.7%;
+  top: 62%;
   width: 33.4%;
   height: 32.7%;
   background: transparent;
@@ -1110,7 +1110,7 @@ button:active {
 
 .settings-panel__hotspot--one {
   left: 67.5%;
-  top: 17.5%;
+  top: 26%;
   width: 20%;
   height: 12.5%;
   border: 2px solid #f0a51b;
@@ -1134,7 +1134,7 @@ button:active {
 
 .settings-panel__hotspot--two {
   left: 67.5%;
-  top: 32%;
+  top: 41%;
   width: 20%;
   height: 12.5%;
   border: 2px solid #f0a51b;
@@ -1164,7 +1164,7 @@ button:active {
 .settings-panel__sound {
   position: absolute;
   left: 43%;
-  top: 48.5%;
+  top: 58.4%;
   z-index: 2;
   width: 45%;
   height: 8%;
@@ -1226,7 +1226,7 @@ button:active {
 .settings-panel__language {
   position: absolute;
   left: 67.5%;
-  top: 61%;
+  top: 71.35%;
   z-index: 2;
   width: 20%;
   height: 12.5%;
@@ -1258,7 +1258,7 @@ button:active {
 
 .settings-panel__hotspot--reset {
   left: 5%;
-  top: 75%;
+  top: 86.5%;
   width: 76%;
   height: 10%;
   border: 0;
@@ -1270,7 +1270,7 @@ button:active {
 
 .settings-panel__hotspot--back {
   left: 5%;
-  top: 88%;
+  top: 99%;
   width: 30%;
   height: 10%;
   border: 0;
@@ -1485,7 +1485,21 @@ canvas {
 }
 
 .arena-wrap--menu canvas {
-  aspect-ratio: 3 / 2;
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+
+.arena-wrap--adventure-level canvas {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+
+.arena-wrap--playing canvas {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
 }
 
 .controls-grid {
@@ -1655,7 +1669,7 @@ canvas {
   }
 
   .game-shell {
-    padding: 12px;
+    padding: 0;
   }
 
   .scoreboard {
@@ -1764,6 +1778,17 @@ canvas {
     justify-content: end;
   }
 
+  .controls-grid--playing .touch-row--one-player-arrows {
+    position: fixed;
+    right: 12px;
+    bottom: 10px;
+    z-index: 16;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(2, 58px);
+    justify-content: end;
+    pointer-events: auto;
+  }
+
   .controls-grid--playing .touch-row button,
   .controls-grid--adventure-level .touch-row button {
     width: 56px;
@@ -1829,6 +1854,12 @@ canvas {
     grid-column: 3;
     grid-row: 2;
     background: rgba(45, 190, 255, 0.78) !important;
+  }
+
+  .touch-button--one-player-arrow {
+    background: rgba(7, 16, 24, 0.78) !important;
+    color: #ffe45e !important;
+    font-size: 22px !important;
   }
 }
 

@@ -109,6 +109,7 @@ type AdventureState = {
   bossName: string;
   travelerMet: boolean;
   travelerDialogueIndex: number;
+  postBossDialogueIndex: number;
   postBossTimer: number;
   cameraShake: number;
   message: string;
@@ -155,19 +156,19 @@ const STAGES: Array<{ id: StageId; name: string; number: string }> = [
 ];
 
 const STAGE_TITLES: Record<StageId, string> = {
-  desert: 'STAGE 1: THE CANYON',
-  space: 'STAGE 2: OUTER REACH',
+  forest: 'STAGE 1: FOREST OF BEGINNINGS',
+  desert: 'STAGE 2: THE CANYON',
   ocean: 'STAGE 3: SUNKEN SHORES',
-  forest: 'STAGE 4: FOREST OF BEGINNINGS',
-  hell: 'STAGE 5: INFERNAL WASTES',
+  hell: 'STAGE 4: INFERNAL WASTES',
+  space: 'STAGE 5: OUTER REACH',
 };
 
 const STAGE_TITLES_RU: Record<StageId, string> = {
-  desert: 'ЭТАП 1: КАНЬОН',
-  space: 'ЭТАП 2: ДАЛЬНИЙ КОСМОС',
+  forest: 'ЭТАП 1: ЛЕС НАЧАЛА',
+  desert: 'ЭТАП 2: КАНЬОН',
   ocean: 'ЭТАП 3: ЗАТОНУВШИЕ БЕРЕГА',
-  forest: 'ЭТАП 4: ЛЕС НАЧАЛА',
-  hell: 'ЭТАП 5: АДСКИЕ ПУСТОШИ',
+  hell: 'ЭТАП 4: АДСКИЕ ПУСТОШИ',
+  space: 'ЭТАП 5: ДАЛЬНИЙ КОСМОС',
 };
 
 const STAGE_NAMES_RU: Record<StageId, string> = {
@@ -204,8 +205,13 @@ const TEXT = {
       'But something dark has awakened...',
       "If you truly seek the crystal, you'd better be ready.",
     ],
-    travelerAfterBoss: 'You did it... but that was only the beginning.',
-    crystalCollected: '1/5 Pixel Crystals',
+    travelerAfterBoss: [
+      'You found it...',
+      'One of the Pixel Crystals.',
+      'But there are still more scattered across the world.',
+      'Come. The next one awaits.',
+    ],
+    crystalCollected: '1/5 crystals collected',
     nextBossPreview: 'Next boss approaches...',
     menuSettings: 'Settings',
     previousWorld: 'Previous world',
@@ -287,8 +293,13 @@ const TEXT = {
       'Но пробудилось что-то темное...',
       'Если ты правда ищешь кристалл, тебе лучше быть готовым.',
     ],
-    travelerAfterBoss: 'У тебя получилось... но это только начало.',
-    crystalCollected: '1/5 Пиксельных кристаллов',
+    travelerAfterBoss: [
+      'Ты нашел его...',
+      'Один из Пиксельных кристаллов.',
+      'Но остальные все еще разбросаны по миру.',
+      'Идем. Следующий уже ждет.',
+    ],
+    crystalCollected: 'Собрано кристаллов: 1/5',
     nextBossPreview: 'Следующий босс приближается...',
     menuSettings: 'Настройки',
     previousWorld: 'Предыдущий мир',
@@ -596,6 +607,7 @@ const createAdventureState = (chapter = 1, crystals = 0): AdventureState => {
     bossName: isFirstBoss ? 'FOREST GUARDIAN' : 'SHADOW GUARDIAN',
     travelerMet: !isFirstBoss,
     travelerDialogueIndex: -1,
+    postBossDialogueIndex: -1,
     postBossTimer: 0,
     cameraShake: 0,
     message: isFirstBoss ? 'Forest Guardian' : 'Next boss fight begins',
@@ -1095,10 +1107,24 @@ function App() {
 
     const advanceTravelerDialogue = () => {
       const state = adventureRef.current;
-      if (screenRef.current !== 'adventure-level' || !state.travelerMet || state.travelerDialogueIndex < 0) return false;
+      if (screenRef.current !== 'adventure-level') return false;
       const now = performance.now();
       if (now - lastTravelerDialogueAdvanceRef.current < 120) return true;
       lastTravelerDialogueAdvanceRef.current = now;
+      if (state.won) {
+        const playerCenter = state.player.x + state.player.width / 2;
+        const closeToWanderer = Math.abs(playerCenter - TRAVELER_X) < 96;
+        const lineCount = TEXT[languageRef.current].travelerAfterBoss.length;
+        if (!closeToWanderer || state.postBossDialogueIndex < 0 || state.postBossDialogueIndex >= lineCount) return false;
+        if (state.postBossDialogueIndex < lineCount - 1) {
+          state.postBossDialogueIndex += 1;
+        } else {
+          state.postBossDialogueIndex = lineCount;
+        }
+        keysRef.current.clear();
+        return true;
+      }
+      if (!state.travelerMet || state.travelerDialogueIndex < 0) return false;
       const lineCount = TEXT[languageRef.current].travelerCrystalRumor.length;
       if (state.travelerDialogueIndex < lineCount - 1) {
         state.travelerDialogueIndex += 1;
@@ -1205,6 +1231,10 @@ function App() {
         return;
       }
 
+      if (event.code === 'KeyA') keysRef.current.delete('KeyD');
+      if (event.code === 'KeyD') keysRef.current.delete('KeyA');
+      if (event.code === 'ArrowLeft') keysRef.current.delete('ArrowRight');
+      if (event.code === 'ArrowRight') keysRef.current.delete('ArrowLeft');
       keysRef.current.add(event.code);
       if (
         [
@@ -1270,36 +1300,65 @@ function App() {
       state.message = 'Ouch!';
     };
 
+    const applyAdventureHorizontalInput = (player: AdventurePlayer, keys: Set<string>) => {
+      const leftHeld = keys.has('KeyA') || keys.has('ArrowLeft');
+      const rightHeld = keys.has('KeyD') || keys.has('ArrowRight');
+
+      if (leftHeld && !rightHeld) {
+        if (player.vx > 0) player.vx *= 0.22;
+        player.vx = Math.max(player.vx - 1.25, -5.8);
+        player.facing = -1;
+      } else if (rightHeld && !leftHeld) {
+        if (player.vx < 0) player.vx *= 0.22;
+        player.vx = Math.min(player.vx + 1.25, 5.8);
+        player.facing = 1;
+      } else {
+        player.vx *= player.grounded ? 0.78 : 0.9;
+      }
+    };
+
     const updateAdventure = () => {
       const state = adventureRef.current;
       const { player, boss } = state;
       const keys = keysRef.current;
       if (state.won) {
         state.postBossTimer += 1;
-        player.vx *= 0.86;
+        applyAdventureHorizontalInput(player, keys);
+        if ((keys.has('KeyW') || keys.has('ArrowUp') || keys.has('Space')) && player.grounded) {
+          player.vy = -14;
+          player.grounded = false;
+        }
         player.fireCooldown = Math.max(0, player.fireCooldown - 1);
         player.punchCooldown = Math.max(0, player.punchCooldown - 1);
+        player.invincible = Math.max(0, player.invincible - 1);
+        player.stamina = clamp(player.stamina + 0.55, 0, 100);
+        player.vy = Math.min(player.vy + 0.78, 15);
+        player.x += player.vx;
+        player.x = clamp(player.x, 82, WIDTH - player.width - 82);
+        const previousBottom = player.y + player.height;
+        player.grounded = false;
+        player.y += player.vy;
+        adventurePlatforms.forEach((platform) => {
+          if (
+            player.vy >= 0 &&
+            previousBottom <= platform.y + 8 &&
+            rectsOverlap(player, platform)
+          ) {
+            player.y = platform.y - player.height;
+            player.vy = 0;
+            player.grounded = true;
+          }
+        });
+        if (player.y > HEIGHT + 80) damageAdventurePlayer(state);
+        const playerCenter = player.x + player.width / 2;
+        if (Math.abs(playerCenter - TRAVELER_X) < 96 && state.postBossDialogueIndex < 0) {
+          state.postBossDialogueIndex = 0;
+        }
         state.cameraShake = Math.max(0, state.cameraShake - 0.75);
-        if (state.postBossTimer === 135) {
-          state.crystals = Math.max(state.crystals, 1);
-          state.message = TEXT[languageRef.current].crystalCollected;
-        }
-        if (state.postBossTimer > 520) {
-          adventureRef.current = createAdventureState(state.chapter + 1, Math.max(state.crystals, 1));
-          adventureRef.current.cameraShake = 12;
-        }
         return;
       }
 
-      if (keys.has('KeyA') || keys.has('ArrowLeft')) {
-        player.vx = Math.max(player.vx - 0.75, -5.2);
-        player.facing = -1;
-      } else if (keys.has('KeyD') || keys.has('ArrowRight')) {
-        player.vx = Math.min(player.vx + 0.75, 5.2);
-        player.facing = 1;
-      } else {
-        player.vx *= player.grounded ? 0.78 : 0.9;
-      }
+      applyAdventureHorizontalInput(player, keys);
 
       if ((keys.has('KeyW') || keys.has('ArrowUp') || keys.has('Space')) && player.grounded) {
         player.vy = -14;
@@ -1690,7 +1749,7 @@ function App() {
         state.chapter === 1 &&
         boss.action === 'spawn' &&
         (!state.travelerMet || state.travelerDialogueIndex >= 0 || boss.actionTimer > 58);
-      const bossVisible = (boss.health > 0 || boss.action === 'death') && !guideIntroActive;
+      const bossVisible = (boss.health > 0 || boss.action === 'death') && !guideIntroActive && !state.won;
       if (guideIntroActive) {
         drawForestGuide(time);
         if (state.travelerMet && state.travelerDialogueIndex >= 0) drawTravelerDialogue();
@@ -1868,7 +1927,6 @@ function App() {
       context.font = '900 12px monospace';
       context.fillText('STAMINA', 28, 82);
       context.fillText('F PUNCH  G FIREBALL', 116, 82);
-      context.fillText(`${state.crystals}/5 CRYSTALS`, 28, 102);
 
       if (bossVisible && !state.won) {
         context.fillStyle = '#101216';
@@ -1891,8 +1949,9 @@ function App() {
       }
 
       if (state.won) {
-        drawPostBossSequence(time);
+        drawPostBossWanderer(time);
       }
+
     };
 
     const updateFighter = (
@@ -1907,12 +1966,26 @@ function App() {
       owner: 'p1' | 'p2',
     ) => {
       const keys = keysRef.current;
+      const leftHeld = keys.has(left);
+      const rightHeld = keys.has(right);
 
-      fighter.facing = fighter.x + fighter.width / 2 < opponent.x + opponent.width / 2 ? 1 : -1;
+      if (leftHeld && !rightHeld) {
+        fighter.facing = -1;
+      } else if (rightHeld && !leftHeld) {
+        fighter.facing = 1;
+      } else {
+        fighter.facing = fighter.x + fighter.width / 2 < opponent.x + opponent.width / 2 ? 1 : -1;
+      }
 
       if (fighter.stun <= 0) {
-        if (keys.has(left)) fighter.vx -= SPEED * 0.24;
-        if (keys.has(right)) fighter.vx += SPEED * 0.24;
+        if (leftHeld && !rightHeld) {
+          if (fighter.vx > 0) fighter.vx *= 0.22;
+          fighter.vx = Math.max(fighter.vx - SPEED * 0.42, -SPEED);
+        }
+        if (rightHeld && !leftHeld) {
+          if (fighter.vx < 0) fighter.vx *= 0.22;
+          fighter.vx = Math.min(fighter.vx + SPEED * 0.42, SPEED);
+        }
         if (keys.has(jump) && fighter.grounded) {
           fighter.vy = JUMP;
           fighter.grounded = false;
@@ -2347,42 +2420,24 @@ function App() {
       context.restore();
     };
 
-    const drawPostBossSequence = (time: number) => {
+    const drawPostBossWanderer = (time: number) => {
       const state = adventureRef.current;
       const timer = state.postBossTimer;
-      const crystalX = 618;
-      const crystalY = 336 + Math.sin(time * 0.006) * 5;
+      if (timer < 36) return;
+
+      drawForestGuide(time);
+      const playerCenter = state.player.x + state.player.width / 2;
+      const closeToWanderer = Math.abs(playerCenter - TRAVELER_X) < 96;
+      if (!closeToWanderer) return;
+      const lines = TEXT[languageRef.current].travelerAfterBoss;
+      const dialogueIndex = state.postBossDialogueIndex;
+
+      const boxX = 374;
+      const boxY = 278;
+      const boxWidth = 430;
+      const boxHeight = 66;
       context.save();
-
-      if (timer > 18) {
-        const glow = context.createRadialGradient(crystalX, crystalY, 4, crystalX, crystalY, 64);
-        glow.addColorStop(0, 'rgba(133, 238, 255, 0.95)');
-        glow.addColorStop(0.35, 'rgba(62, 173, 255, 0.42)');
-        glow.addColorStop(1, 'rgba(43, 84, 255, 0)');
-        context.fillStyle = glow;
-        context.beginPath();
-        context.arc(crystalX, crystalY, 64, 0, Math.PI * 2);
-        context.fill();
-        context.fillStyle = '#8eefff';
-        context.strokeStyle = '#ffffff';
-        context.lineWidth = 3;
-        context.beginPath();
-        context.moveTo(crystalX, crystalY - 34);
-        context.lineTo(crystalX + 22, crystalY - 7);
-        context.lineTo(crystalX + 10, crystalY + 32);
-        context.lineTo(crystalX - 14, crystalY + 32);
-        context.lineTo(crystalX - 24, crystalY - 7);
-        context.closePath();
-        context.fill();
-        context.stroke();
-      }
-
-      if (timer > 92 && timer < 210) {
-        drawForestGuide(time);
-        const boxX = 374;
-        const boxY = 278;
-        const boxWidth = 430;
-        const boxHeight = 66;
+      if (dialogueIndex >= 0 && dialogueIndex < lines.length) {
         context.fillStyle = '#fffdf0';
         context.strokeStyle = '#151515';
         context.lineWidth = 4;
@@ -2390,68 +2445,45 @@ function App() {
         context.roundRect(boxX, boxY, boxWidth, boxHeight, 10);
         context.fill();
         context.stroke();
+        context.beginPath();
+        context.moveTo(boxX + boxWidth - 102, boxY + boxHeight - 2);
+        context.lineTo(TRAVELER_X - 12, boxY + boxHeight + 25);
+        context.lineTo(boxX + boxWidth - 62, boxY + boxHeight - 2);
+        context.closePath();
+        context.fill();
+        context.stroke();
         context.fillStyle = '#111111';
         context.font = '15px "Geist Pixel", "Press Start 2P", monospace';
         context.textAlign = 'left';
         context.textBaseline = 'top';
-        context.fillText(TEXT[languageRef.current].travelerAfterBoss, boxX + 20, boxY + 20);
+        const words = lines[dialogueIndex].split(' ');
+        const wrapped: string[] = [];
+        let line = '';
+        words.forEach((word) => {
+          const next = line ? `${line} ${word}` : word;
+          if (context.measureText(next).width > boxWidth - 44 && line) {
+            wrapped.push(line);
+            line = word;
+          } else {
+            line = next;
+          }
+        });
+        if (line) wrapped.push(line);
+        wrapped.slice(0, 2).forEach((text, index) => {
+          context.fillText(text, boxX + 20, boxY + 18 + index * 20);
+        });
       }
 
-      if (timer > 130) {
+      if (dialogueIndex >= lines.length) {
         context.fillStyle = '#fff1c7';
-        context.font = '20px "Geist Pixel", "Press Start 2P", monospace';
+        context.strokeStyle = '#101216';
+        context.lineWidth = 5;
+        context.font = '22px "Geist Pixel", "Press Start 2P", monospace';
         context.textAlign = 'center';
-        context.fillText(TEXT[languageRef.current].crystalCollected, WIDTH / 2, 88);
-      }
-
-      if (timer > 230) {
-        const portalX = 810;
-        const portalY = 374;
-        const pulse = 1 + Math.sin(time * 0.01) * 0.08;
-        context.save();
-        context.translate(portalX, portalY);
-        context.scale(pulse, 1);
-        context.fillStyle = 'rgba(93, 211, 255, 0.22)';
-        context.strokeStyle = '#7af0ff';
-        context.lineWidth = 6;
-        context.beginPath();
-        context.ellipse(0, 0, 46, 82, 0, 0, Math.PI * 2);
-        context.fill();
-        context.stroke();
-        context.strokeStyle = '#ffffff';
-        context.lineWidth = 2;
-        context.beginPath();
-        context.ellipse(0, 0, 28, 58, 0, 0, Math.PI * 2);
-        context.stroke();
-        context.restore();
-      }
-
-      if (timer > 330) {
-        context.fillStyle = 'rgba(0, 0, 0, 0.54)';
-        context.fillRect(0, 0, WIDTH, HEIGHT);
-        context.fillStyle = '#fff1c7';
-        context.font = '20px "Geist Pixel", "Press Start 2P", monospace';
-        context.textAlign = 'center';
-        context.fillText(TEXT[languageRef.current].nextBossPreview, WIDTH / 2, 92);
-        context.save();
-        context.translate(WIDTH / 2, 334);
-        context.fillStyle = 'rgba(4, 7, 12, 0.92)';
-        context.beginPath();
-        context.ellipse(0, -22, 54, 88, 0, 0, Math.PI * 2);
-        context.fill();
-        context.fillRect(-46, -94, 92, 130);
-        context.fillStyle = '#63f034';
-        context.fillRect(-18, -72, 10, 10);
-        context.fillRect(8, -72, 10, 10);
-        context.strokeStyle = '#63f034';
-        context.lineWidth = 4;
-        context.beginPath();
-        context.moveTo(-62, -10);
-        context.quadraticCurveTo(-112, 26, -82, 84);
-        context.moveTo(62, -10);
-        context.quadraticCurveTo(112, 26, 82, 84);
-        context.stroke();
-        context.restore();
+        context.textBaseline = 'alphabetic';
+        const collected = TEXT[languageRef.current].crystalCollected;
+        context.strokeText(collected, WIDTH / 2, 96);
+        context.fillText(collected, WIDTH / 2, 96);
       }
 
       context.restore();
@@ -3798,6 +3830,10 @@ function App() {
   }, [view]);
 
   const press = (code: string) => {
+    if (code === 'KeyA') keysRef.current.delete('KeyD');
+    if (code === 'KeyD') keysRef.current.delete('KeyA');
+    if (code === 'ArrowLeft') keysRef.current.delete('ArrowRight');
+    if (code === 'ArrowRight') keysRef.current.delete('ArrowLeft');
     keysRef.current.add(code);
   };
 
@@ -3948,7 +3984,7 @@ function App() {
 
   return (
     <main className="game-shell">
-      <section className={`arena-wrap ${screen !== 'playing' && screen !== 'adventure-level' ? 'arena-wrap--menu' : ''}`}>
+      <section className={`arena-wrap arena-wrap--${screen} ${screen !== 'playing' && screen !== 'adventure-level' ? 'arena-wrap--menu' : ''}`}>
         <canvas
           ref={canvasRef}
           width={WIDTH}
@@ -3981,11 +4017,6 @@ function App() {
               </button>
             )}
             {screen === 'main-menu' && (
-              <button type="button" className="start-menu__bottom-play" onClick={() => startGame(playerModeRef.current, stageRef.current)}>
-                {t.play}
-              </button>
-            )}
-            {screen === 'main-menu' && (
               <button type="button" className="start-menu__sign-out" onClick={signOutToRegistration}>
                 {t.signOut}
               </button>
@@ -3997,8 +4028,8 @@ function App() {
             )}
             {screen === 'main-menu' && language === 'ru' && (
               <div className="menu-copy-overlay" aria-hidden="true">
-                <span className="menu-copy menu-copy--center-play">{t.play}</span>
-                <span className="menu-copy menu-copy--center-adventure">{t.adventureMode}</span>
+                <span className="menu-copy menu-copy--center-play menu-copy--ru-play">{t.play}</span>
+                <span className="menu-copy menu-copy--center-adventure menu-copy--ru-adventure">{t.adventureMode}</span>
                 <span className="menu-copy menu-copy--center-settings">{t.menuSettings}</span>
                 <span className="menu-copy menu-copy--world-title">{t.selectWorld}</span>
                 <span className="menu-copy menu-copy--settings-title">{t.settings}</span>
@@ -4008,7 +4039,6 @@ function App() {
                 <span className="menu-copy menu-copy--language">{t.language}</span>
                 <span className="menu-copy menu-copy--reset">{t.resetProgress}</span>
                 <span className="menu-copy menu-copy--back">‹ {t.back}</span>
-                <span className="menu-copy menu-copy--bottom-play">{t.play}</span>
               </div>
             )}
             {screen === 'adventure-splash' && (
@@ -4195,6 +4225,27 @@ function App() {
               ? t.cpuControls(CHARACTERS.p2.name)
               : t.p2Controls(CHARACTERS.p2.move)}
           </p>
+          {screen === 'playing' && playerMode === '1p' && (
+            <div className="touch-row touch-row--one-player-arrows" aria-label={t.p1Controls(CHARACTERS.p1.move)}>
+              {[
+                ['‹', 'KeyA'],
+                ['⌃', 'KeyW'],
+                ['›', 'KeyD'],
+              ].map(([label, code]) => (
+                <button
+                  key={code}
+                  type="button"
+                  className={`touch-button touch-button--${code} touch-button--one-player-arrow`}
+                  onPointerDown={pressTouch(code)}
+                  onPointerUp={releaseTouch(code)}
+                  onPointerLeave={releaseTouch(code)}
+                  onPointerCancel={releaseTouch(code)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {playerMode === '2p' && (
             <div className="touch-row">
               {[
